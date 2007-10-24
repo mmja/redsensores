@@ -1,0 +1,66 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+MediBench Benchmarking for platform evaluation.
+
+Date: 2007/02/21
+
+Author:
+Frank Bouwens
+
+Jr. DSP Researcher
+
+Stichting IMEC Nederland
+High Tech Campus 48
+5656 AE Eindhoven
+The Netherlands
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Step 1: WFDB INSTALLATION AND WQRS COMPILATION
+
+This application is used for benchmarking a variety of platform e.g MSP430, Coolflux, ATmega, etc. that
+are used for low-power wireless devices. To get the application compiled and running the following 
+items are required:
+
+WQRS benchmark: http://www.physionet.org/physiotools/wag/wqrs-1.htm
+WFDB package: http://www.physionet.org/physiotools/wfdb.shtml
+
+First download and install the WFDB package on your computer. Make sure to download the source files of 
+the package (http://www.physionet.org/physiotools/wfdb.tar.gz). Read the INSTALL file in the package to 
+for more details. Note: Use the dynamic link option during configuration and install the package in your 
+home directory.
+
+Second, set the environment variable LD_LIBRARY_PATH with the path to the WFDB library e.g. 
+setenv LD_LIBRARY_PATH /imecnl/users/bouwens/wfdb/lib/  
+
+Finally, the compilation can be done with: 
+gcc -o wqrs wqrs.c -I<full_path_wfdb_include> -L<full_path_wfdb_library> -lwfdb -lm
+
+For Example:
+gcc -o wqrs wqrs.c -I/imecnl/users/bouwens/wfdb/include -L/imecnl/users/bouwens/wfdb/lib/ -lwfdb -lm
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Step 2: RUNNING THE WQRS APPLICATION
+
+The input of the application comes from the Physionet database. The MIT-BIH Arrhythmia Database 
+(http://www.physionet.org/physiobank/database/mitdb/) is selected for benchmarking, however the sampling
+frequency is 360Hz insteadof 200Hz. This requires an option of the application. Only the MLII lead is 
+used for this as well, but this requires modification.
+
+Let assume the databases are stored in MITDB in the database folder of the WFDB package. The wqrs
+benchmark is executed as:
+
+./wqrs -r MITDB/100 -p 100 -R
+
+Where "-p 100" and -R results in a resampling at 200Hz.
+
+This will create a MITDB folder in the execution folder with the output named "100.wqrs". To varify the
+output the application "bxb" in the WFDB package can be used. Copy it to this folder and execute:
+
+./bxb -r MITDB/100 -a atr wqrs
+
+To see the output of the wqrs benchmark in text copy the application "rdann" in the WFDB package to this
+folder as well. The output is visualized by:
+
+./rdann -a wqrs -r MITDB/100
+
