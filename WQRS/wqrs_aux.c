@@ -162,199 +162,7 @@ void setgvmode(int8_t mode){
 //-----------------------------------------------isigopen--------------------------------------------------
 
 
-static char irec[WFDB_MAXRNL+1]; // current record name, set by wfdb_setirec 
-WFDB_FILE *wfdb_open(char *s, char *record, int mode)
-{/*
-    char *wfdb, *p;
-    struct wfdb_path_component *c0;
-    WFDB_FILE *ifile;
 
-    // Check to see if standard input or output is requested. 
-    if (strcmp(s, "-") == 0 ||
-	(strcmp(s, "hea") == 0 && strcmp(record, "-") == 0))
-	if (mode == WFDB_READ) {
-	    static WFDB_FILE wfdb_stdin;
-
-	    wfdb_stdin.type = WFDB_LOCAL;
-	    wfdb_stdin.fp = stdin;
-	    return (&wfdb_stdin);
-	}
-    else {
-	    static WFDB_FILE wfdb_stdout;
-
-	    wfdb_stdout.type = WFDB_LOCAL;
-	    wfdb_stdout.fp = stdout;
-	    return (&wfdb_stdout);
-	}
-
-    // If the record name is empty, use the type as the record name and empty
-    //   the type string. 
-    if (record == NULL || *record == '\0') {
-	if (s == NULL || *s == '\0')
-	    return (NULL);	// failure -- both components are empty 
-	record = s; s = NULL;
-    }
-
-    // If the file is to be opened for output, use the current directory.
-    //   An output file can be opened in another directory if the path to
-    //   that directory is the first part of 'record'. 
-    if (mode == WFDB_WRITE) {
-	spr1(wfdb_filename, record, s);
-	return (wfdb_fopen(wfdb_filename, WB));
-    }
-
-    // If the file is to be opened for input, prepare to search the database
-    //   directories. 
-
-    if (wfdb_path_list == NULL) (void)getwfdb();
-
-    for (c0 = wfdb_path_list; c0; c0 = c0->next) {
-	char long_filename[MFNLEN];
-
-        p = wfdb_filename;
-	wfdb = c0->prefix;
-	while (*wfdb && p < wfdb_filename+MFNLEN-20) {
-	  if (*wfdb == '%') {
-		// Perform substitutions in the WFDB path where `%' is found 
-		wfdb++;
-		if (*wfdb == 'r') {
-		    // `%r' -> record name 
-		    (void)strcpy(p, irec);
-		    p += strlen(p);
-		    wfdb++;
-		}
-		else if ('1' <= *wfdb && *wfdb <= '9' && *(wfdb+1) == 'r') {
-		    // `%Nr' -> first N characters of record name 
-		    int n = *wfdb - '0';
-		    int len = strlen(irec);
-
-		    if (len < n) n = len;
-		    (void)strncpy(p, irec, n);
-		    p += n;
-		    *p = '\0';
-		    wfdb += 2;
-		}
-		else    //`%X' -> X, if X is neither `r', nor a non-zero digit
-			   followed by 'r' 
-		    *p++ = *wfdb++;
-	    }
-	    else *p++ = *wfdb++;
-	}
-	// Unless the WFDB component was empty, or it ended with a directory
-	//   separator, append a directory separator to wfdb_filename;  then
-	//   append the record and type components.  Note that names of remote
-	//   files (URLs) are always constructed using '/' separators, even if
-	//   the native directory separator is '\' (MS-DOS) or ':' (Macintosh).
-	
-	if (p != wfdb_filename) {
-	    if (c0->type == WFDB_NET) {
-		if (*(p-1) != '/') *p++ = '/';
-	    }
-#ifndef MSDOS
-	    else if (*(p-1) != DSEP)
-#else
-	    else if (*(p-1) != DSEP && *(p-1) != ':')
-#endif
-		*p++ = DSEP;
-	}
-	if (p + strlen(record) + (s ? strlen(s) : 0) > wfdb_filename + MFNLEN-5)
-	    continue;	// name too long -- skip
-	spr1(p, record, s);
-	if ((ifile = wfdb_fopen(wfdb_filename, RB)) != NULL) {
-	    // Found it! Add its path info to the WFDB path. 
-	    wfdb_addtopath(wfdb_filename);
-	    return (ifile);
-	}
-	// Not found -- try again, using an alternate form of the name,
-	//   provided that that form is distinct. 
-	strcpy(long_filename, wfdb_filename);
-	spr2(p, record, s);
-	if (strcmp(wfdb_filename, long_filename) && 
-	    (ifile = wfdb_fopen(wfdb_filename, RB)) != NULL) {
-	    wfdb_addtopath(wfdb_filename);
-	    return (ifile);
-	}
-    }
-    // If the file was not found in any of the directories listed in wfdb,
-   //   return a null file pointer to indicate failure. 
-    return (NULL);*/
-}
-/* wfdb_setirec saves the current record name (its argument) in irec (defined
-above) to be substituted for `%r' in the WFDB path by wfdb_open as necessary.
-wfdb_setirec is invoked by isigopen (except when isigopen is invoked
-recursively to open a segment within a multi-segment record) and by annopen
-(when it is about to open a file for input). */
-
-void wfdb_setirec(char *p)
-{
-    char *r;
-
-    for (r = p; *r; r++)
-	if (*r == DSEP) p = r+1;	// strip off any path information 
-#ifdef MSDOS
-	else if (*r == ':') p = r+1;
-#endif
-    if (strcmp(p, "-"))	       // don't record `-' (stdin) as record name 
-	strncpy(irec, p, WFDB_MAXRNL); //a lo mejor esta linea se puede quitar porq irec no se lee mas
-									//por lo q se puede quitar el metodo entero q no vale para nada
-}
-
-static int8_t readheader(char *record)
-{
-    
-}
-
-
-
-static void isigclose(void)
-{/*
-    struct isdata *is;
-    struct igdata *ig;
-
-    if (nisig == 0) return;
-    if (sbuf && !in_msrec) {
-	(void)free(sbuf);
-	sbuf = NULL;
-	sample_vflag = 0;
-    }
-    if (isd) {
-	while (nisig)
-	    if (is = isd[--nisig]) {
-		if (is->info.fname) (void)free(is->info.fname);
-		if (is->info.units) (void)free(is->info.units);
-		if (is->info.desc)  (void)free(is->info.desc);
-		(void)free(is);
-	    }
-	(void)free(isd);
-	isd = NULL;
-    }
-    else
-	nisig = 0;
-    maxisig = 0;
-
-    if (igd) {
-	while (nigroups)
-	    if (ig = igd[--nigroups]) {
-		if (ig->fp) (void)wfdb_fclose(ig->fp);
-		if (ig->buf) (void)free(ig->buf);
-		(void)free(ig);
-	    }
-	(void)free(igd);
-	igd = NULL;
-    }
-    else
-	nigroups = 0;
-    maxigroup = 0;
-
-    istime = 0L;
-    gvc = ispfmax = 1;
-    if (hheader) {
-	(void)wfdb_fclose(hheader);
-	hheader = NULL;
-    }
-    if (nosig == 0 && maxhsig != 0)
-	hsdfree();*/
-}
 
 
 //Return:
@@ -364,193 +172,63 @@ static void isigclose(void)
 //-2 Failure: incorrect header file format 
 
 int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:siarray=NULL y nsig=0
-	int8_t navail, ngroups, nn;
-    struct hsdata *hs;
-    struct isdata *is;
-    struct igdata *ig;
-    WFDB_Signal s, si, sj;
-    WFDB_Group g;
-
-    /* Close previously opened input signals unless otherwise requested. */
-    if (*record == '+') record++;
-    else isigclose();
-
-    /* Save the current record name. */
-    if (!in_msrec) wfdb_setirec(record);  //in_msrec no ha sido inicializado
-
-    /* Read the header and determine how many signals are available. */
-    if ((navail = readheader(record)) <= 0) {
-		if (navail == 0 && segments) {	/* this is a multi-segment record */
-		    in_msrec = 1;
-		    /* Open the first segment to get signal information. */
-		    if ((navail = readheader(segp->recname)) >= 0) {
-			if (msbtime == 0L) msbtime = btime;
-			if (msbdate == (WFDB_Date)0) msbdate = bdate;
-		    }
-		}
-		if (navail == 0 && nsig)
-		    // // wfdb_error("isigopen: record %s has no signals\n", record);
-		if (navail <= 0)
-		    return (navail);
-    }
-
-    /* If nsig <= 0, isigopen fills in up to (-nsig) members of siarray based
-       on the contents of the header, but no signals are actually opened.  The
-       value returned is the number of signals named in the header. */
-    if (nsig <= 0) {  //nsign=0
-		nsig = -nsig;
-		if (navail < nsig) nsig = navail;
-		//siarray=NULL
-		/*if (siarray != NULL)  
-		    for (s = 0; s < nsig; s++)
-				siarray[s] = hsd[s]->info;*/
-		in_msrec = 0;	// necessary to avoid errors when reopening 
-		return (navail);   //-->no estoy segura pero se suponeq si aqui entra porq nsig=0 y aqui hace return
-						   //el resto del metodo no se ejecuta y se puede comentar
-    }
-   
-
-    /* Determine how many new signals we should attempt to open.  The caller's
-       upper limit on this number is nsig, and the upper limit defined by the
-       header is navail. */
-    /*if (nsig > navail) nsig = navail;
-
-    // Allocate input signals and signal group workspace.
-    nn = nisig + nsig;
-    if (allocisig(nn) != nn)
-	return (-1);	// failed, nisig is unchanged, allocisig emits error
-    else
-	nsig = nn;
-    nn = nigroups + hsd[nsig-nisig-1]->info.group + 1;
-    if (allocigroup(nn) != nn)
-	return (-1);	// failed, allocigroup emits error
-    else
-	ngroups = nn;
-
-    // Set default buffer size (if not set already by setibsize). 
-    if (ibsize <= 0) ibsize = BUFSIZ;
-  
-    //Open the signal files.  One signal group is handled per iteration.  In
-    //  this loop, si counts through the entries that have been read from hsd,
-    //  and s counts the entries that have been added to isd. 
-    for (g = si = s = 0; si < navail && s < nsig; si = sj) {
-        hs = hsd[si];
-	is = isd[nisig+s];
-	ig = igd[nigroups+g];
-
-	// Find out how many signals are in this group. 
-        for (sj = si + 1; sj < navail; sj++)
-	  if (hsd[sj]->info.group != hs->info.group) break;
-
-	// Skip this group if there are too few slots in the caller's array. 
-	if (sj - si > nsig - s) continue;
-
-	// Set the buffer size and the seek capability flag. 
-	if (hs->info.bsize < 0) {
-	    ig->bsize = hs->info.bsize = -hs->info.bsize;
-	    ig->seek = 0;
-	}
-	else {
-	    if ((ig->bsize = hs->info.bsize) == 0) ig->bsize = ibsize;
-	    ig->seek = 1;
-	}
-
-	// Skip this group if a buffer can't be allocated. 
-	if ((ig->buf = (char *)malloc(ig->bsize)) == NULL) continue;
-
-	// Check that the signal file is readable. 
-	if (hs->info.fmt == 0)
-	    ig->fp = NULL;	// Don't open a file for a null signal. 
-	else { 
-	    ig->fp = wfdb_open(hs->info.fname, (char *)NULL, WFDB_READ);
-	    // Skip this group if the signal file can't be opened. 
-	    if (ig->fp == NULL) {
-	        (void)free(ig->buf);
-		ig->buf = NULL;
-		continue;
-	    }
-	}
-
-	// All tests passed -- fill in remaining data for this group.
-	ig->be = ig->bp = ig->buf + ig->bsize;
-	ig->start = hs->start;
-	ig->stat = 1;
-	while (si < sj && s < nsig) {
-	    if (copysi(&is->info, &hs->info) < 0) {
-		//  wfdb_error("isigopen: insufficient memory\n");
-		return (-3);
-	    }
-	    is->info.group = nigroups + g;
-	    is->skew = hs->skew;
-	    ++s;
-	    if (++si < sj) {
-		hs = hsd[si];
-		is = isd[nisig + s];
-	    }
-	}
-	g++;
-    }
-
-    /* Produce a warning message if none of the requested signals could be opened. 
-    if (s == 0 && nsig)
-	// // wfdb_error("isigopen: none of the signals for record %s is readable\n",
-		// record);
-
-    // Copy the WFDB_Siginfo structures to the caller's array.  Use these
-    //   data to construct the initial sample vector, and to determine the
-    //   maximum number of samples per signal per frame and the maximum skew. 
-    for (si = 0; si < s; si++) {
-        is = isd[nisig + si];
-	if (siarray != NULL && copysi(&siarray[si], &is->info) < 0) {
-	    // // wfdb_error("isigopen: insufficient memory\n");
-	    return (-3);
-	}
-	is->samp = is->info.initval;
-	if (ispfmax < is->info.spf) ispfmax = is->info.spf;
-	if (skewmax < is->skew) skewmax = is->skew;
-    }
-    setgvmode(gvmode);	// Reset sfreq if appropriate. 
-    gvc = ispfmax;	// Initialize getvec's sample-within-frame counter. 
-    nisig += s;		// Update the count of open input signals. 
-    nigroups += g;	// Update the count of open input signal groups. 
-
-    if (sigmap_init() < 0)
-	return (-1);
-
-    // Determine the total number of samples per frame. 
-    for (si = framelen = 0; si < nisig; si++)
-	framelen += isd[si]->info.spf;
-
-    // Allocate workspace for getvec and isgsettime. 
-    if (framelen > tuvlen &&
-	((tvector = (WFDB_Sample *)realloc(tvector, sizeof(WFDB_Sample)*framelen)) == NULL ||
-	 (uvector = (WFDB_Sample *)realloc(uvector, sizeof(WFDB_Sample)*framelen)) == NULL)) {
-	// // wfdb_error("isigopen: can't allocate frame buffer\n");
-	if (tvector) (void)free(tvector);
-	return (-3);
-    }
-    tuvlen = framelen;
-
-    // If deskewing is required, allocate the deskewing buffer (unless this is
-    //   a multi-segment record and dsbuf has been allocated already).
-    if (skewmax != 0 && (!in_msrec || dsbuf == NULL)) {
-	dsbi = -1;	// mark buffer contents as invalid 
-	dsblen = framelen * (skewmax + 1);
-	if (dsbuf) free(dsbuf);
-	if ((dsbuf=(WFDB_Sample *)malloc(dsblen*sizeof(WFDB_Sample))) == NULL)
-	    // // wfdb_error("isigopen: can't allocate buffer for deskewing\n");
-	// If the buffer couldn't be allocated, the signals can still be read,
-	//   but won't be deskewed. 
-    }
-    return (s);	*/
+	//este metodo se puede quitar seguramente y a todos los que llama
 }
 
 //-----------------------------------------------setifreq--------------------------------------------------
 
 //sets the current input sampling frequency
-void setifreq(WFDB_Frequency frequency){
+int8_t setifreq(WFDB_Frequency f){
+	if (f > 0.0) {
+		WFDB_Frequency error, g = sfreq; //se que sfreq=0
+		
+		nisig=1;//esto lo meto yo porq creo que tiene este valor
+		
+		gv0 = (WFDB_Sample*)realloc(gv0, nisig*sizeof(WFDB_Sample)); 
+		gv1 = (WFDB_Sample*)realloc(gv1, nisig*sizeof(WFDB_Sample));
+		if (gv0 == NULL || gv1 == NULL) {
+		    //wfdb_error("setifreq: too many (%d) input signals\n", nisig);
+		    if (gv0) (void)free(gv0);
+		    ifreq = 0.0;
+		    return (-2);
+		}
+		ifreq = f; //esta linea es la mas importante se supone!!!!!!!!!!!!!!!!!!!
+		
+		/* The 0.005 below is the maximum tolerable error in the resampling
+		   frequency (in Hz).  The code in the while loop implements Euclid's
+		   algorithm for finding the greatest common divisor of two integers,
+		   but in this case the integers are (implicit) multiples of 0.005. */
+		while ((error = f - g) > 0.005 || error < -0.005)
+		    if (f > g) f -= g;
+		    else g -= f;
+		/* f is now the GCD of sfreq and ifreq in the sense described above.
+		   We divide each raw sampling interval into mticks subintervals. */
+	        mticks = (long)(sfreq/f + 0.5);  //sfreq es 0
+		/* We divide each resampled interval into nticks subintervals. */
+		nticks = (long)(ifreq/f + 0.5);
+		/* Raw and resampled intervals begin simultaneously once every mnticks
+		   subintervals; we say an epoch begins at these times. */
+		mnticks = mticks * nticks;
+		/* gvtime is the number of subintervals from the beginning of the
+		   current epoch to the next sample to be returned by getvec(). */
+		gvtime = 0;
+		rgvstat = rgetvec(gv0);
+		rgvstat = rgetvec(gv1);
+		/* rgvtime is the number of subintervals from the beginning of the
+		   current epoch to the most recent sample returned by rgetvec(). */
+		rgvtime = nticks;
+		return (0);
+    }
+    else {
+		ifreq = 0.0;
+		//wfdb_error("setifreq: improper frequency %g (must be > 0)\n", f);
+		return (-1);
+    }
+
 	
 }
+//-------------------------------------------muvadu----------------------------------------------------
+
 //his function converts the potential difference v from microvolts to ADC units, 
 //based on the gain for input signal s.
 WFDB_Sample muvadu(WFDB_Signal s, int8_t v){
@@ -681,8 +359,33 @@ int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){
 int8_t wfdbinit(char *record, WFDB_Anninfo *aiarray, uint8_t nann,
            WFDB_Siginfo *siarray, uint8_t nsig){
 	           
-	return 0;
-	           	           
+	/*int stat;
+
+    if ((stat = annopen(record, aiarray, nann)) == 0)
+	stat = isigopen(record, siarray, (int)nsig);
+    return (stat);
+    
+	  */         
+	//relleno a mano sabiendo los valores que le entran  
+	siarray[0].fname="100.dat";
+    siarray[0].desc="MLII";
+    siarray[0].units=NULL;
+    siarray[0].gain=0;
+    siarray[0].initval=995;
+    siarray[0].group=0;
+    siarray[0].fmt=212;
+    siarray[0].spf=1;
+    siarray[0].bsize=0;
+    siarray[0].adcres=11;
+    siarray[0].adczero=1024;
+    siarray[0].baseline=1024;
+    siarray[0].nsamp=65000;
+    siarray[0].cksum=-22131;
+    return (1);
+    
+
+	  
+	  	           
 }	
 //This function closes all open WFDB files and frees any memory allocated by other WFDB library functions
 void wfdbquit(void){
@@ -742,8 +445,8 @@ WFDB_Time strtim(char *string){
 	
 }
 //This function determines the sampling frequency (in Hz) for the record specified by its argument.
-WFDB_Frequency sampfreq(char *record){
-	return 0;
+WFDB_Frequency sampfreq(char *record){ 
+	return (0);
 	
 }
 
