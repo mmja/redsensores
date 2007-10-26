@@ -4,7 +4,7 @@
 #include <stdint.h>
 # include <stdlib.h>
 //Definicion de tipos
-typedef int8_t	     WFDB_Sample;   /* units are adus */
+typedef int16_t	     WFDB_Sample;   /* units are adus */
 typedef int16_t 	 WFDB_Time;	    /* units are sample intervals */
 typedef int16_t     WFDB_Date;	    /* units are days */
 typedef double	 WFDB_Gain;	    /* units are adus per physical unit */
@@ -30,10 +30,10 @@ struct WFDB_siginfo {	/* signal information structure */
     int8_t spf;		/* samples per frame (>1 for oversampled signals) */
     int8_t bsize;		/* block size (for character special files only) */
     int8_t adcres;		/* ADC resolution in bits */
-    int8_t adczero;	/* ADC output given 0 VDC input */
-    int8_t baseline;	/* ADC output given 0 physical units input */
+    int16_t adczero;	/* ADC output given 0 VDC input */
+    int16_t baseline;	/* ADC output given 0 physical units input */
     int16_t nsamp;		/* number of samples (0: unspecified) */
-    int8_t cksum;		/* 16-bit checksum of all samples */
+    int16_t cksum;		/* 16-bit checksum of all samples */
 };
 
 struct WFDB_ann {		/* annotation structure */
@@ -187,7 +187,7 @@ WFDB_Sample sample(WFDB_Signal s, WFDB_Time t);
 int8_t sample_valid(void);
 void setgvmode(int8_t mode);
 int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig);
-void setifreq(WFDB_Frequency frequency);
+int8_t setifreq(WFDB_Frequency f);
 WFDB_Sample muvadu(WFDB_Signal s, int8_t v);
 int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot);
 int8_t wfdbinit(char *record, WFDB_Anninfo *aiarray, uint8_t nann,
