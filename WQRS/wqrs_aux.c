@@ -614,7 +614,7 @@ int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){ //sabemos n=0
     }
     switch (oa->info.stat) {
       case WFDB_WRITE:	/* MIT-format output file */
-/*      default:
+      default:
 	if (annot->anntyp == 0) {
 	    /* The caller intends to write a null annotation here, but putann
 	       must not write a word of zeroes that would be interpreted as
