@@ -188,12 +188,7 @@ main(int8_t argc, char **argv)
     	int8_t jflag = 0;		     // if non-zero, annotate J-points 
     	int8_t vflag = 0;
     	WFDB_Time 
-    	
-    
-    
-    
-    
-    
+    	    
     */
    
 
@@ -272,22 +267,25 @@ main(int8_t argc, char **argv)
 		exit(1);
     }
 
+
    // if (gvmode == 0 && (p = getenv("WFDBGVMODE")))
 	//gvmode = atoi(p);  -->no se q es wfdbgvmode, nos lo tragamos hasta entenderlo
     setgvmode(gvmode|WFDB_GVPAD);
 
-    //if ((nsig = isigopen(record, NULL, 0)) < 1) exit(2);
+    //if ((nsig = isigopen(record, NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
     if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
 	//(void)fprintf(stderr, "%s: insufficient memory\n", pname);
 	//	printf("%s: insufficient memory\n", pname);
 	exit(2);
     }
     a.name = "wqrs"; a.stat = WFDB_WRITE;
-    if ((nsig = wfdbinit(record, &a, 1, s, nsig)) < 1) exit(2);
+    if ((nsig = wfdbinit(record, &a, 1, s, nsig)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
+    
+    
     if (sig < 0 || sig >= nsig) sig = 0;
     if ((gain = s[sig].gain) == 0.0) gain = WFDB_DEFGAIN;
-    sps = sampfreq((char *)NULL);
-    if (Rflag) {
+    sps = 0; //sampfreq((char *)NULL); no hace falta usar este metodo, ya he comprobado que es 0
+    if (Rflag) {  
     	if (PWFreq == 60.0) setifreq(sps = 120.);
     	else setifreq(sps = 150.); //solo deberia quedarse esta opcion
     }
@@ -382,8 +380,7 @@ main(int8_t argc, char **argv)
 				    annot.time = tpq;
 				    annot.anntyp = NORMAL;
 				    if (putann(0, &annot) < 0) { /* write the annotation */
-				    //wfdbquit queda comentada xq ya no leemos de ficheros
-						//wfdbquit();	/* close files if an error occurred */
+						//wfdbquit();	// close files if an error occurred 
 						exit(1);
 				    }
 				    /*if (jflag) {    //opcion -j elminiada
@@ -438,14 +435,7 @@ main(int8_t argc, char **argv)
 
     (void)free(lbuf);
     (void)free(ebuf);
-  
-    
-    
-    //la funcion wfdbquit la comento de momento, foema parte del wfdb.h pero es externa(no se de donde vendra)
-    //de todas formas se supone que se encarga de cerrar los ficheros de los que hemos leido, pero como ya no leemos
-    //de ningun fichero supongo q no hace falta
-    
-    //  wfdbquit();		        /* close WFDB files */
+    //wfdbquit();		        // close WFDB files 
     //fprintf(stderr, "\n");
     /*if (vflag) { //opcion -v eliminada
 	//printf("\n\nDone! \n\nResulting annotation file:  %s.wqrs\n\n\n",
