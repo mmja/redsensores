@@ -258,6 +258,7 @@ main(int argc, char **argv)
     setgvmode(gvmode|WFDB_GVPAD);
 
     if ((nsig = isigopen(record, NULL, 0)) < 1) exit(2);
+    printf("%d",nsig);
     if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
 	(void)fprintf(stderr, "%s: insufficient memory\n", pname);
 	exit(2);

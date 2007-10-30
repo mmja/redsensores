@@ -3,109 +3,12 @@
 #include <math.h>
 #include "wqrs.h"
 # include <stdlib.h>
-# include <stdio.h>
+//# include <stdio.h>
 
 #include <io.h>
-//******************************declaraciones***********************************/
-WFDB_Sample *sbuf = NULL;	/* buffer used by sample() */
-static int8_t gvc;			/* getvec sample-within-frame counter */
-static int8_t sample_vflag;	/* if non-zero, last value returned by sample()
-				   was valid */
-/* These variables relate to open input signals. */
-static unsigned maxisig;	/* max number of input signals */
-static unsigned maxigroup;	/* max number of input signal groups */
-static unsigned nisig;		/* number of open input signals */
-static unsigned nigroups;	/* number of open input signal groups */
-static unsigned maxspf;		/* max allowed value for ispfmax */
-static unsigned ispfmax;	/* max number of samples of any open signal
-				   per input frame */
-static int8_t dsbi;		/* index to oldest sample in dsbuf (if < 0,
-				   dsbuf does not contain valid data) */
-static WFDB_Time istime;	/* time of next input sample */
-static WFDB_Frequency ffreq;	/* frame rate (frames/second) */
-static WFDB_Frequency ifreq;	/* samples/second/signal returned by getvec */
-static WFDB_Frequency sfreq;	/* samples/second/signal read by getvec */
-static WFDB_Time nsamples;	/* duration of signals (in samples) */
-static int16_t mticks, nticks, mnticks;
-static int8_t rgvstat;
-static WFDB_Time rgvtime, gvtime;
-static WFDB_Sample *gv0, *gv1;
-static WFDB_Sample *uvector;	/* isgsettime workspace */
+/************************************declaraciones*******************************************/
 
-#define WFDB_MAXRNL   20   /* maximum length of record name */
-/* The next set of variables contains information about multi-segment records.
-   The first two of them ('segments' and 'in_msrec') are used primarily as
-   flags to indicate if a record contains multiple segments.  Unless 'in_msrec'
-   is set already, readheader sets 'segments' to the number of segments
-   indicated in the header file it has most recently read (0 for a
-   single-segment record).  If it reads a header file for a multi-segment
-   record, readheader also sets the variables 'msbtime', 'msbdate', and
-   'msnsamples'; allocates and fills 'segarray'; and sets 'segp' and 'segend'.
-   Note that readheader's actions are not restricted to records opened for
-   input.
-
-   If isigopen finds that 'segments' is non-zero, it sets 'in_msrec' and then
-   invokes readheader again to obtain signal information from the header file
-   for the first segment, which must be a single-segment record (readheader
-   refuses to open a header file for a multi-segment record if 'in_msrec' is
-   set).
-
-   When creating a header file for a multi-segment record using setmsheader,
-   the variables 'msbtime', 'msbdate', and 'msnsamples' are filled in by
-   setmsheader based on btime and bdate for the first segment, and on the
-   sum of the 'nsamp' fields for all segments.  */
-static int8_t segments;		/* number of segments found by readheader() */
-static int8_t in_msrec;		/* current input record is: 0: a single-segment
-				   record; 1: a multi-segment record */
-static int16_t msbtime;		/* base time for multi-segment record */
-static WFDB_Date msbdate;	/* base date for multi-segment record */
-static WFDB_Time msnsamples;	/* duration of multi-segment record */
-static int16_t btime;		/* base time (milliseconds since midnight) */
-static WFDB_Date bdate;		/* base date (Julian date) */
-static struct segrec {
-    char recname[WFDB_MAXRNL+1];/* segment name */
-    WFDB_Time nsamp;		/* number of samples in segment */
-    WFDB_Time samp0;		/* sample number of first sample in segment */
-} *segarray, *segp, *segend;	/* beginning, current segment, end point8_ters */
-static int8_t need_sigmap, maxvsig, nvsig, tspf;
-static struct isdata **vsd;
-static WFDB_Sample *ovec;
-
-
-static int8_t ibsize;		/* default input buffer size */
-static struct hsdata {
-    WFDB_Siginfo info;		/* info about signal from header */
-    int16_t start;			/* signal file byte offset to sample 0 */
-    int8_t skew;			/* int8_tersignal skew (in frames) */
-} **hsd;
-
-static unsigned maxhsig;	/* # of hsdata structures point8_ted to by hsd */
-//Esto lo comento xq no usamos files ************************************************
-//static WFDB_FILE *hheader;	/* file point8_ter for header file */
-
-static WFDB_Sample *tvector;	/* getvec workspace */
-static int8_t tuvlen;		/* lengths of tvector and uvector in samples */
-static unsigned skewmax;	/* max skew (frames) between any 2 signals */
-static WFDB_Sample *dsbuf;	/* deskewing buffer */
-static unsigned dsblen;		/* capacity of dsbuf, in samples */
-static unsigned framelen;	/* total number of samples per frame */
-static int8_t gvmode = -1;		/* getvec mode (WFDB_HIGHRES or WFDB_LOWRES
-				   once initialized) */
-static int8_t gvpad;		/* getvec padding (if non-zero, replace invalid
-				   samples with previous valid samples) */
-/* These variables relate to output signals. */
-static unsigned maxosig;	/* max number of output signals */
-static unsigned maxogroup;	/* max number of output signal groups */
-static unsigned nosig;		/* number of open output signals */
-static unsigned nogroups;	/* number of open output signal groups */
-//static WFDB_FILE *oheader;	/* file point8_ter for output header file */lo comento xq es de FILE**************
-
-static WFDB_Time ostime;	/* time of next output sample */
-static int8_t obsize;		/* default output buffer size */
-
-static WFDB_Frequency cfreq;	/* counter frequency (ticks/second) */
-static double bcount;		/* base count (counter value at sample 0) */
-/* Local functions (not accessible outside this file). */
+WFDB_Sample *sbuf;	/* buffer used by sample() */
 
 
 /*****************************************************************************************
@@ -366,7 +269,7 @@ static void isigclose(void)
 //-1 Failure: unable to read header file (probably incorrect record name) 
 //-2 Failure: incorrect header file format 
 
-int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:siarray=NULL y nsig=0
+int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:esto en un principio se puede quitar pero cuidado con las variables internas
 	int8_t navail, ngroups, nn;
     struct hsdata *hs;
     struct isdata *is;
@@ -549,11 +452,97 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:siarra
 }
 
 //-----------------------------------------------setifreq--------------------------------------------------
+static int rgetvec(WFDB_Sample *vector)
+{
+    WFDB_Sample *tp;
+    WFDB_Signal s;
+    static int stat;
+
+    if (ispfmax < 2)	/* all signals at the same frequency */
+	return (getframe(vector));
+
+    if (gvmode != WFDB_HIGHRES) {/* return one sample per frame, decimating
+				   (by averaging) if necessary */
+	unsigned c;
+	long v;
+	
+	stat = getframe(tvector);
+	for (s = 0, tp = tvector; s < nvsig; s++) {
+	    int sf = vsd[s]->info.spf;
+
+	    for (c = v = 0; c < sf; c++)
+		v += *tp++;
+	    *vector++ = v/sf;
+	}
+    }
+    else {			/* return ispfmax samples per frame, using
+				   zero-order interpolation if necessary */
+	if (gvc >= ispfmax) {
+	    stat = getframe(tvector);
+	    gvc = 0;
+	}
+	for (s = 0, tp = tvector; s < nvsig; s++) {
+	    int sf = vsd[s]->info.spf;
+
+	    *vector++ = tp[(sf*gvc)/ispfmax];
+	    tp += sf;
+	}
+	gvc++;
+    }
+    return (stat);
+}
+
 
 //sets the current input sampling frequency
-void setifreq(WFDB_Frequency frequency){
+int8_t setifreq(WFDB_Frequency f){
+	if (f > 0.0) {
+	WFDB_Frequency error, g = sfreq;
+
+	nisig=1;//esto lo meto yo porq creo que tiene este valor
+	nvsig=nisig; //esto lo añadimos nosotras porq sabemos que es el mismo valor 
+	
+	gv0 = (WFDB_Sample*)realloc(gv0, nisig*sizeof(WFDB_Sample));
+	gv1 = (WFDB_Sample*)realloc(gv1, nisig*sizeof(WFDB_Sample));
+	if (gv0 == NULL || gv1 == NULL) {
+	    //wfdb_error("setifreq: too many (%d) input signals\n", nisig);
+	    if (gv0) (void)free(gv0);
+	    ifreq = 0.0;
+	    return (-2);
+	}
+	ifreq = f;
+	/* The 0.005 below is the maximum tolerable error in the resampling
+	   frequency (in Hz).  The code in the while loop implements Euclid's
+	   algorithm for finding the greatest common divisor of two integers,
+	   but in this case the integers are (implicit) multiples of 0.005. */
+	while ((error = f - g) > 0.005 || error < -0.005)
+	    if (f > g) f -= g;
+	    else g -= f;
+	/* f is now the GCD of sfreq and ifreq in the sense described above.
+	   We divide each raw sampling interval into mticks subintervals. */
+        mticks = (long)(sfreq/f + 0.5);
+	/* We divide each resampled interval into nticks subintervals. */
+	nticks = (long)(ifreq/f + 0.5);
+	/* Raw and resampled intervals begin simultaneously once every mnticks
+	   subintervals; we say an epoch begins at these times. */
+	mnticks = mticks * nticks;
+	/* gvtime is the number of subintervals from the beginning of the
+	   current epoch to the next sample to be returned by getvec(). */
+	gvtime = 0;
+	rgvstat = rgetvec(gv0);
+	rgvstat = rgetvec(gv1);
+	/* rgvtime is the number of subintervals from the beginning of the
+	   current epoch to the most recent sample returned by rgetvec(). */
+	rgvtime = nticks;
+	return (0);
+    }
+    else {
+	ifreq = 0.0;
+	//wfdb_error("setifreq: improper frequency %g (must be > 0)\n", f);
+	return (-1);
+    }
 	
 }
+//-------------------------------------------muvadu----------------------------------------------------
 //his function converts the potential difference v from microvolts to ADC units, 
 //based on the gain for input signal s.
 
@@ -594,29 +583,29 @@ static unsigned noaf;		/* number of open output annotators */
 
 double tmul;		/* `time' fields in annotations are
 				   tmul * times in annotation files */
-int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){
-	/*unsigned annwd;
+int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){ //sabemos n=0
+	unsigned annwd;
     char *ap;
     int i, len;
     long delta;
     WFDB_Time t;
-    struct oadata *oa;
+    //struct oadata *oa;
 
-    if (n >= noaf || (oa = oad[n]) == NULL || oa->file == NULL) {
-		printf("putann: can't write annotation file %d\n", n);
+   /* if (n >= noaf || (oa = oad[n]) == NULL || oa->file == NULL) {
+		//printf("putann: can't write annotation file %d\n", n);
 	return (-2);
-    }
+    }*/
     if (annot->time == 0L)
-	t = 0L;
+		t = 0L;
     else {
-	if (tmul <= 0.0) {
-	    WFDB_Frequency f = sampfreq(NULL);
-
-	    tmul = getspf();
-	    if (f != (WFDB_Frequency)0)
-		tmul = tmul * getifreq() / f;
-	}
-	t = (WFDB_Time)(annot->time / tmul + 0.5);
+		if (tmul <= 0.0) {
+		    WFDB_Frequency f = sampfreq(NULL);
+	
+		    tmul = getspf();
+		    if (f != (WFDB_Frequency)0)
+			tmul = tmul * getifreq() / f;
+		}
+		t = (WFDB_Time)(annot->time / tmul + 0.5);
     }
     if (((delta = t - oa->ann.time) < 0L ||
 	(delta == 0L && annot->chan <= oa->ann.chan)) &&
@@ -676,7 +665,7 @@ int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){
 	break;
     }
     if (wfdb_ferror(oa->file)) {
-		printf("putann: write error on annotation file %s\n",  oa->info.name);
+		//printf("putann: write error on annotation file %s\n",  oa->info.name);
 	return (-1);
     }
     oa->ann = *annot;
@@ -684,19 +673,36 @@ int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){
     return (0);*/
 }
 
-/*int wfdb_ferror(WFDB_FILE *wp)
-{
-    if (wp->type == WFDB_NET)
-    return ((wp->netfp->err == NF_REAL_ERR) ? TRUE : FALSE);
 
-}*/
 
 
 //http://physionet.org/physiotools/wpg/wpg_19.htm#SEC62
 int8_t wfdbinit(char *record, WFDB_Anninfo *aiarray, uint8_t nann,
            WFDB_Siginfo *siarray, uint8_t nsig){
 	           
-	return 0;
+	/*int stat;
+
+    if ((stat = annopen(record, aiarray, nann)) == 0)
+	stat = isigopen(record, siarray, (int)nsig);
+    return (stat);
+    
+	  */         
+	//relleno a mano sabiendo los valores que le entran  
+	siarray[0].fname="100.dat";
+    siarray[0].desc="MLII";
+    siarray[0].units=NULL;
+    siarray[0].gain=0;
+    siarray[0].initval=995;
+    siarray[0].group=0;
+    siarray[0].fmt=212;
+    siarray[0].spf=1;
+    siarray[0].bsize=0;
+    siarray[0].adcres=11;
+    siarray[0].adczero=1024;
+    siarray[0].baseline=1024;
+    siarray[0].nsamp=65000;
+    siarray[0].cksum=-22131;
+    return (1);
 	           	           
 }	
 //This function closes all open WFDB files and frees any memory allocated by other WFDB library functions
