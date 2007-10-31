@@ -34,7 +34,13 @@ struct WFDB_siginfo {	/* signal information structure */
     int16_t nsamp;		/* number of samples (0: unspecified) */
     int16_t cksum;		/* 16-bit checksum of all samples */
 };
-
+static struct sigmapinfo {
+    char *desc;
+    int32_t gain, scale, offset;
+    WFDB_Sample baseline;
+    int8_t index;
+    int8_t spf;
+} *smi;
 struct WFDB_ann {		/* annotation structure */
     WFDB_Time time;	/* annotation time, in sample intervals from
 			   the beginning of the record */
@@ -62,6 +68,10 @@ typedef struct WFDB_anninfo WFDB_Anninfo;
 //constantes definidas en wfdb
 #define WFDB_INVALID_SAMPLE (-32768) /* samples from getvec or getframe with
 				        this value are not valid */
+#define WFDB_DEFFREQ	250.0  /* default sampling frequency (Hz) */
+
+#define WFDB_LOWRES   	0	/* return one sample per signal per frame */
+
 #define WFDB_HIGHRES	1	/* return each sample of oversampled signals,
 				   duplicating samples of other signals */
 #define WFDB_GVPAD	2	/* replace invalid samples with previous valid
@@ -113,6 +123,8 @@ int8_t adumuv(WFDB_Signal s, WFDB_Sample a);
 WFDB_Time strtim(char *string);
 WFDB_Frequency sampfreq(char *record);
 int8_t getvec(WFDB_Sample *vector);
+static int8_t copysi(WFDB_Siginfo *to, WFDB_Siginfo *from);
+
 
 /*
 #if defined(__STDC__) || defined(_WINDOWS)
@@ -146,6 +158,8 @@ static struct isdata {		/* unique for each input signal */
     WFDB_Sample samp;		/* most recent sample read */
     int8_t skew;			/* int8_tersignal skew (in frames) */
 } **isd;
+
+typedef struct isdata isdata;
 
 static int8_t gvc;			/* getvec sample-within-frame counter */
 static int8_t sample_vflag;	/* if non-zero, last value returned by sample()
@@ -242,8 +256,9 @@ static unsigned nogroups;	/* number of open output signal groups */
 static WFDB_Time ostime;	/* time of next output sample */
 static int8_t obsize;		/* default output buffer size */
 
-static WFDB_Frequency cfreq;	/* counter frequency (ticks/second) */
-static double bcount;		/* base count (counter value at sample 0) */
+
+//static WFDB_Frequency cfreq;	/* counter frequency (ticks/second) */
+//static double bcount;		/* base count (counter value at sample 0) */
 /* Local functions (not accessible outside this file). */
 
 /****************************contenidos de wfdbf.c***********************/

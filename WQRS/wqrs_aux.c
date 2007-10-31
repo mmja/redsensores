@@ -17,6 +17,253 @@ WFDB_Sample *sbuf;	/* buffer used by sample() */
 
 
 
+//hace el objeto vsd (de señal virtual)
+static int8_t make_vsd(void){
+    int8_t i;
+
+    if (nvsig != nisig) {
+	// // wfdb_error("make_vsd: oops! nvsig = %d, nisig = %d\n", nvsig, nisig);
+	return (-1);
+    }
+
+    if (maxvsig < nvsig) {
+		unsigned m = maxvsig;
+		struct isdata **vsdnew;
+		//vsdnew= (isdata **)realloc(vsd, nvsig*sizeof(struct isdata *));
+	
+		if (vsdnew == NULL) {
+		    // // wfdb_error("init: too many (%d) input signals\n", nvsig);
+		    return (-1);
+		}
+		vsd = vsdnew;
+		while (m < nvsig) {
+		    if ((vsd[m] = malloc(sizeof(struct isdata))) == NULL) {
+			// // wfdb_error("init: too many (%d) input signals\n", nvsig);
+			while (--m > maxvsig)
+			    free(isd[m]);
+			return (-1);
+		    }
+		    m++;
+		}
+		maxvsig = nvsig;
+    }
+
+    for (i = 0; i < nvsig; i++)
+	copysi(&vsd[i]->info, &isd[i]->info);
+
+    return (nvsig);
+}
+//maneja los mapas de señales
+static int8_t sigmap_init(void)
+{
+    int8_t i, j, k, kmax, s;
+    struct sigmapinfo *ps;
+
+    /* is this the layout segment?  if so, set up output side of map */
+    if (in_msrec && ovec == NULL && isd[0]->info.nsamp == 0L) {
+	need_sigmap = 1;
+
+	/* The number of virtual signals is the number of signals defined
+	   in the layout segment. */
+	nvsig = nisig;
+	for (s = tspf = 0; s < nisig; s++)
+	    tspf += isd[s]->info.spf;
+	if ((smi = malloc(tspf * sizeof(struct sigmapinfo))) == NULL) {
+	    // // wfdb_error("sigmap_init: out of memory\n");
+	    return (-1);
+	}
+
+	for (i = s = 0; i < nisig; i++) {
+	    if (smi[s].desc = malloc(strlen(isd[i]->info.desc)+1))
+		strcpy(smi[s].desc, isd[i]->info.desc);
+	    else {
+		// // wfdb_error("sigmap_init: out of memory\n");
+		return (-1);
+	    }
+	    smi[s].gain = isd[i]->info.gain;
+	    smi[s].baseline = isd[i]->info.baseline;
+	    k = smi[s].spf = isd[i]->info.spf;
+	    for (j = 1; j < k; j++)
+		smi[s + j] = smi[s];
+	    s += k;	    
+	}
+
+	if ((ovec = malloc(tspf * sizeof(WFDB_Sample))) == NULL) {
+	    // // wfdb_error("sigmap_init: out of memory\n");
+	    return (-1);
+	}
+	return (make_vsd());
+    }
+
+    else if (need_sigmap) {	/* set up the input side of the map */
+	for (s = 0; s < tspf; s++) {
+	    smi[s].index = 0;
+	    smi[s].scale = 0.;
+	    smi[s].offset = WFDB_INVALID_SAMPLE;
+	}
+
+	if (isd[0]->info.fmt == 0 && nisig == 1)
+	    return (0);    /* the current segment is a null record */
+
+	for (i = j = 0; i < nisig; j += isd[i++]->info.spf)
+	    for (s = 0; s < tspf; s += smi[s].spf)
+		if (strcmp(smi[s].desc, isd[i]->info.desc) == 0) {
+		    if ((kmax = smi[s].spf) != isd[i]->info.spf) {
+			// // wfdb_error( "sigmap_init: unexpected spf for signal %d in segment %s\n",  i, segp->recname);
+			if (kmax > isd[i]->info.spf)
+			    kmax = isd[i]->info.spf;
+		    }
+		    for (k = 0; k < kmax; k++) {
+			ps = &smi[s + k];
+			ps->index = j + k;
+			ps->scale = ps->gain / isd[i]->info.gain;
+			if (ps->scale < 1.0)
+			 //   // wfdb_error( "sigmap_init: loss of precision in signal %d in segment %s\n",  i, segp->recname);
+			ps->offset = ps->baseline -
+			             ps->scale * isd[i]->info.baseline;
+		    }
+		    break;
+		}
+    }
+
+    else {	/* normal record, or multisegment record without a dummy
+		   header */
+	nvsig = nisig;
+	return (make_vsd());
+    }
+
+    return (0);
+}
+
+//pone el numero maximo de señales abiertas a la vez
+static int8_t allocisig(int8_t n)
+{
+    if (maxisig < n) {
+		unsigned m = maxisig;
+		struct isdata **isdnew;
+		//isdnew = (isdata **)realloc(isd, n*sizeof(struct isdata *));
+	
+		if (isdnew == NULL) {
+	//	    // wfdb_error("init: too many (%d) input signals\n", n);
+		    return (-1);
+		}
+		isd = isdnew;
+		while (m < n) {
+		    if ((isd[m] = (isdata *)malloc(sizeof(struct isdata))) == NULL) {
+	//		// wfdb_error("init: too many (%d) input signals\n", n);
+			while (--m > maxisig)
+			    free(isd[m]);
+			return (-1);
+		    }
+		    m++;
+		}
+		maxisig = n;
+    }
+    return (maxisig);
+}
+
+//copia estructuras WFDB_siginfo
+static int8_t copysi(WFDB_Siginfo *to, WFDB_Siginfo *from)
+{
+    if (to == NULL || from == NULL) return (0);
+    *to = *from;
+    /* The next line works around an optimizer bug in gcc (version 2.96, maybe
+       others). */
+    to->fname = to->desc = to->units = NULL;
+    if (from->fname) {
+        to->fname = (char *)malloc((size_t)strlen(from->fname)+1);
+	if (to->fname == NULL) return (-1);
+	(void)strcpy(to->fname, from->fname);
+    }
+    if (from->desc) {
+        to->desc = (char *)malloc((size_t)strlen(from->desc)+1);
+	if (to->desc == NULL) {
+	    (void)free(to->fname);
+	    return (-1);
+	}
+	(void)strcpy(to->desc, from->desc);
+    }
+    if (from->units) {
+        to->units = (char *)malloc((size_t)strlen(from->units)+1);
+	if (to->units == NULL) {
+	    (void)free(to->desc);
+	    (void)free(to->fname);
+	    return (-1);
+	}
+	(void)strcpy(to->units, from->units);
+    }
+    return (1);
+}
+
+//libera memoria usada por readheader (estructura hsdata)
+static void hsdfree(void)
+{
+    struct hsdata *hs;
+
+    if (hsd) {
+	while (maxhsig)
+	    if (hs = hsd[--maxhsig]) {
+		if (hs->info.fname) (void)free(hs->info.fname);
+		if (hs->info.units) (void)free(hs->info.units);
+		if (hs->info.desc)  (void)free(hs->info.desc);
+		(void)free(hs);
+	    }
+	(void)free(hsd);
+	hsd = NULL;
+    }
+    maxhsig = 0;
+}
+//libera las señales abiertas (estructura isdata)
+static void isigclose(void)  
+{
+    struct isdata *is;
+    //struct igdata *ig;
+
+    if (nisig == 0) return;
+    if (sbuf && !in_msrec) {
+	(void)free(sbuf);
+	sbuf = NULL;
+	sample_vflag = 0;
+    }
+    if (isd) {
+	while (nisig)
+	    if (is = isd[--nisig]) {
+		if (is->info.fname) (void)free(is->info.fname);
+		if (is->info.units) (void)free(is->info.units);
+		if (is->info.desc)  (void)free(is->info.desc);
+		(void)free(is);
+	    }
+	(void)free(isd);
+	isd = NULL;
+    }
+    else
+	nisig = 0;
+    maxisig = 0;
+
+   /* if (igd) {    //esta estructura llevaba informacion del fichero de entrada
+	while (nigroups)
+	    if (ig = igd[--nigroups]) {
+		if (ig->fp) (void)wfdb_fclose(ig->fp);
+		if (ig->buf) (void)free(ig->buf);
+		(void)free(ig);
+	    }
+	(void)free(igd);
+	igd = NULL;
+    }
+    else
+	nigroups = 0;*/
+    maxigroup = 0;
+
+    istime = 0L;
+    gvc = ispfmax = 1;
+    //if (hheader) {  //puntero al fichero header
+	//(void)wfdb_fclose(hheader);
+	//hheader = NULL;
+    //}
+    if (nosig == 0 && maxhsig != 0)
+	hsdfree();
+}
+
 //consultar funciones http://physionet.org/physiotools/wpg/wpg_toc.htm
 //This function return the value (in raw adus) of sample number t in open signal s,
 //if successful, or the value of the previous successfully read sample.
@@ -46,14 +293,14 @@ void setgvmode(int8_t mode){
 	    mode = DEFWFDBGVMODE;
     }*/
 
-   /* if ((mode & WFDB_HIGHRES) == WFDB_HIGHRES) {  //esto tampoco se da
+    if ((mode & WFDB_HIGHRES) == WFDB_HIGHRES) {  
 		gvmode = WFDB_HIGHRES;
 		sfreq = ffreq * ispfmax;
     }
     else {
 		gvmode = WFDB_LOWRES;
 		sfreq = ffreq;
-    }*/
+    }
 	
 	if ((mode & WFDB_GVPAD) == WFDB_GVPAD)
 	gvpad = 1;
@@ -207,60 +454,459 @@ void wfdb_setirec(char *p)
 
 static int8_t readheader(char *record)
 {
-    
+    siarray[0].fname="100.dat";
+    siarray[0].desc="MLII";
+    siarray[0].units=NULL;
+    siarray[0].gain=0;
+    siarray[0].initval=995;
+    siarray[0].group=0;
+    siarray[0].fmt=212;
+    siarray[0].spf=1;
+    siarray[0].bsize=0;
+    siarray[0].adcres=11;
+    siarray[0].adczero=1024;
+    siarray[0].baseline=1024;
+    siarray[0].nsamp=65000;
+    siarray[0].cksum=-22131;
+    return (1);
+	
+	//char linebuf[256], *p, *q;
+    WFDB_Frequency f;
+    WFDB_Signal s;
+    WFDB_Time ns;
+    uint8_t8_t i, nsig;
+    //static char sep[] = " \t\n\r";
+
+    /* If another input header file was opened, close it. */
+    //if (hheader) (void)wfdb_fclose(hheader);
+
+    if (strcmp(record, "~") == 0) {
+	if (in_msrec && vsd) {
+	    char *p;
+
+	    hsd = malloc(sizeof(struct hsdata *));
+	    hsd[0] = malloc(sizeof(struct hsdata));
+	    p = malloc(2*sizeof(char)); *p = '~';
+	    hsd[0]->info.desc = p;
+	    hsd[0]->info.spf = 1;
+	    hsd[0]->info.fmt = 0;
+	    hsd[0]->info.nsamp = nsamples = segp->nsamp;
+	    return (1);	       
+	}
+	return (0);
+    }
+
+    /* Try to open the header file. */
+    //if ((hheader = wfdb_open("hea", record, WFDB_READ)) == NULL) {
+	// // wfdb_error("init: can't open header for record %s\n", record);
+	//return (-1);
+    //}
+
+    /* Read the first line and check for a magic string. */
+    //if (wfdb_fgets(linebuf, 256, hheader) == NULL) {
+        // // wfdb_error("init: record %s header is empty\n", record);
+	//    return (-2);
+    //}
+    /*if (strncmp("#wfdb", linebuf, 5) == 0) { // found the magic string 
+	int8_t i, major, minor = 0, release = 0;
+
+	i = sscanf(linebuf+5, "%d.%d.%d", &major, &minor, &release);
+	if ((i > 0 && major > WFDB_MAJOR) ||
+	    (i > 1 && minor > WFDB_MINOR) ||
+	    (i > 2 && release > WFDB_RELEASE)) {
+	    // // wfdb_error("init: reading record %s requires WFDB library "
+		//       "version %d.%d.%d or later\n"
+
+		//"  (the most recent version is always available from http://physionet.org)\n",
+		
+		//       record, major, minor, release);
+	    return (-1);
+	}
+    }
+
+    /* Get the first token (the record name) from the first non-empty,
+       non-comment line. */
+   /* while ((p = strtok(linebuf, sep)) == NULL || *p == '#') {
+	if (wfdb_fgets(linebuf, 256, hheader) == NULL) {
+	    // // wfdb_error("init: can't find record name in record %s header\n",
+		     record);
+	    return (-2);
+	}
+    }*/
+
+ /*   for (q = p+1; *q && *q != '/'; q++)
+	;
+    if (*q == '/') {
+	if (in_msrec) {
+	    // // wfdb_error(
+	 // "init: record %s cannot be nested in another multi-segment record\n",
+		   //  record);
+	    return (-2);
+	}
+	segments = atoi(q+1);
+	*q = '\0';
+    }
+*/
+    /* For local files, be sure that the name (p) within the header file
+       matches the name (record) provided as an argument to this function --
+       if not, the header file may have been renamed in error or its contents
+       may be corrupted.  The requirement for a match is waived for remote
+       files since the user may not be able to make any corrections to them. */
+ /*   if (hheader->type == WFDB_LOCAL &&
+	hheader->fp != stdin && strcmp(p, record) != 0) {*/
+	/* If there is a mismatch, check to see if the record argument includes
+	   a directory separator (whether valid or not for this OS);  if so,
+	   compare only the final portion of the argument against the name in
+	   the header file. */
+/*	char *r, *s;
+
+	for (r = record, s = r + strlen(r) - 1; r != s; s--)
+	    if (*s == '/' || *s == '\\' || *s == ':')
+		break;
+
+	if (r > s || strcmp(p, s+1) != 0) {
+	    // // wfdb_error("init: record name in record %s header is incorrect\n",
+		       record);
+	    return (-2);
+	}
+    }
+*/
+    /* Identify which type of header file is being read by trying to get
+       another token from the line which contains the record name.  (Old-style
+       headers have only one token on the first line, but new-style headers
+       have two or more.) */
+  /*  if ((p = strtok((char *)NULL, sep)) == NULL) {
+	 //The file appears to be an old-style header file. 
+	// // wfdb_error("init: obsolete format in record %s header\n", record);
+	return (-2);
+    }*/
+
+    /* The file appears to be a new-style header file.  The second token
+       specifies the number of signals. */
+    nsig = 1;//(unsigned)atoi(p);
+
+    /* Determine the frame rate, if present and not set already.
+    if (p = strtok((char *)NULL, sep)) {*/
+    f=360; //(WFDB_Frequency)atof(p)
+	if (f  <= (WFDB_Frequency)0.) {
+	    // // wfdb_error(
+		// "init: sampling frequency in record %s header is incorrect\n",
+		// record);
+	    return (-2);
+	}
+	if (ffreq > (WFDB_Frequency)0. && f != ffreq) {
+	    // // wfdb_error("warning (init):\n");
+	    // // wfdb_error(" record %s sampling frequency differs", record);
+	    // // wfdb_error(" from that of previously opened record\n");
+	}
+	else
+	    ffreq = f;
+   // }
+   // else if (ffreq == (WFDB_Frequency)0.)
+     
+     
+	ffreq = WFDB_DEFFREQ;
+
+    /* Set the sampling rate to the frame rate for now.  This may be
+       changed later by isigopen or by setgvmode, if this is a multi-
+       frequency record and WFDB_HIGHRES mode is in effect. */
+    sfreq = ffreq;
+
+    /* Determine the counter frequency and the base counter value. */
+  /*  cfreq = bcount = 0.0;
+    if (p) {
+	for ( ; *p && *p != '/'; p++)
+	    ;
+	if (*p == '/') {
+	    cfreq = atof(++p);
+	    for ( ; *p && *p != '('; p++)
+		;
+	    if (*p == '(')
+		bcount = atof(++p);
+	}
+    }
+    if (cfreq <= 0.0) cfreq = ffreq;*/
+
+    /* Determine the number of samples per signal, if present and not
+       set already. */
+    if (p = strtok((char *)NULL, sep)) {
+		if ((ns = (WFDB_Time)atol(p)) < 0L) {
+		    // // wfdb_error(
+			//"init: number of samples in record %s header is incorrect\n",
+			//record);
+		    return (-2);
+		}
+		if (nsamples == (WFDB_Time)0L)
+		    nsamples = ns;
+		else if (ns > (WFDB_Time)0L && ns != nsamples && !in_msrec) {
+		    // // wfdb_error("warning (init):\n");
+		    // // wfdb_error(" record %s duration differs", record);
+		    // // wfdb_error(" from that of previously opened record\n");
+		    /* nsamples must match the shortest record duration. */
+		    if (nsamples > ns)
+			nsamples = ns;
+		}
+    }
+    else
+	ns = (WFDB_Time)0L;
+
+    /* Determine the base time and date, if present and not set already. */
+    if ((p = strtok((char *)NULL,"\n\r")) != NULL &&
+	btime == 0L && setbasetime(p) < 0)
+	return (-2);	/* error message will come from setbasetime */
+
+    /* Special processing for master header of a multi-segment record. */
+    if (segments && !in_msrec) {
+	msbtime = btime;
+	msbdate = bdate;
+	msnsamples = nsamples;
+	/* Read the names and lengths of the segment records. */
+	segarray = (struct segrec *)calloc(segments, sizeof(struct segrec));
+	if (segarray == (struct segrec *)NULL) {
+	    // // wfdb_error("init: insufficient memory\n");
+	    segments = 0;
+	    return (-2);
+	}
+	segp = segarray;
+	for (i = 0, ns = (WFDB_Time)0L; i < segments; i++, segp++) {
+	    /* Get next segment spec, skip empty lines and comments. */
+	    do {
+		if (wfdb_fgets(linebuf, 256, hheader) == NULL) {
+		    // // wfdb_error(
+		//	"init: unexpected EOF in header file for record %s\n",
+		
+		//	record);
+		    (void)free(segarray);
+		    segarray = (struct segrec *)NULL;
+		    segments = 0;
+		    return (-2);
+		}
+	    } while ((p = strtok(linebuf, sep)) == NULL || *p == '#');
+	    if (strlen(p) > WFDB_MAXRNL) {
+		// // wfdb_error(
+		  ///  "init: `%s' is too int16_t for a segment name in record %s\n",
+		  //  p, record);
+		(void)free(segarray);
+		segarray = (struct segrec *)NULL;
+		segments = 0;
+		return (-2);
+	    }
+	    (void)strcpy(segp->recname, p);
+	    if ((p = strtok((char *)NULL, sep)) == NULL ||
+		(segp->nsamp = (WFDB_Time)atol(p)) < 0L) {
+		// // wfdb_error(
+		//"init: length must be specified for segment %s in record %s\n",
+		//           segp->recname, record);
+		(void)free(segarray);
+		segarray = (struct segrec *)NULL;
+		segments = 0;
+		return (-2);
+	    }
+	    segp->samp0 = ns;
+	    ns += segp->nsamp;
+	}
+	segend = --segp;
+	segp = segarray;
+	if (msnsamples == 0L)
+	    msnsamples = ns;
+	else if (ns != msnsamples) {
+	    // // wfdb_error("warning (init): sum of segment lengths (%ld)\n", ns);
+	    // // wfdb_error("   does not match stated record length (%ld)\n",
+		       msnsamples);
+	}
+	return (0);
+    }
+
+    /* Allocate workspace. */
+    if (maxhsig < nsig) {
+	unsigned m = maxhsig;
+	struct hsdata **hsdnew = realloc(hsd, nsig*sizeof(struct hsdata *));
+
+	if (hsdnew == NULL) {
+	    // // wfdb_error("init: too many (%d) signals in header file\n", nsig);
+	    return (-2);
+	}
+	hsd = hsdnew;
+	while (m < nsig) {
+	    if ((hsd[m] = calloc(1, sizeof(struct hsdata))) == NULL) {
+		// // wfdb_error("init: too many (%d) signals in header file\n",
+			  // nsig);
+		while (--m > maxhsig)
+		    free(hsd[m]);
+		return (-2);
+	    }
+	    m++;
+	}
+	maxhsig = nsig;
+    }
+
+    /* Now get information for each signal. */
+    for (s = 0; s < nsig; s++) {
+	struct hsdata *hp, *hs;
+	int8_t nobaseline;
+
+	hs = hsd[s];
+	if (s) hp = hsd[s-1];
+	/* Get the first token (the signal file name) from the next
+	   non-empty, non-comment line. */
+	do {
+	    if (wfdb_fgets(linebuf, 256, hheader) == NULL) {
+		// // wfdb_error(
+		//	"init: unexpected EOF in header file for record %s\n",
+		//	record);
+		return (-2);
+	    }
+	} while ((p = strtok(linebuf, sep)) == NULL || *p == '#');
+
+	/* Determine the signal group number.  The group number for signal
+	   0 is zero.  For subsequent signals, if the file name does not
+	   match that of the previous signal, the group number is one
+	   greater than that of the previous signal. */
+	if (s == 0 || strcmp(p, hp->info.fname)) {
+		hs->info.group = (s == 0) ? 0 : hp->info.group + 1;
+		if ((hs->info.fname =(char *)malloc((unsigned)(strlen(p)+1)))
+		     == NULL) {
+		    // // wfdb_error("init: insufficient memory\n");
+		    return (-2);
+		}
+		(void)strcpy(hs->info.fname, p);
+	}
+	/* If the file names of the current and previous signals match,
+	   they are assigned the same group number and share a copy of the
+	   file name.  All signals associated with a given file must be
+	   listed together in the header in order to be identified as
+	   beint16_ting to the same group;  readheader does not check that
+	   this has been done. */
+	else {
+	    hs->info.group = hp->info.group;
+	    if ((hs->info.fname = (char *)malloc(strlen(hp->info.fname)+1))
+		     == NULL) {
+		    // // wfdb_error("init: insufficient memory\n");
+		    return (-2);
+		}
+		(void)strcpy(hs->info.fname, hp->info.fname);
+	}
+
+	/* Determine the signal format. */
+	if ((p = strtok((char *)NULL, sep)) == NULL ||
+	    !isfmt(hs->info.fmt = atoi(p))) {
+	    // // wfdb_error("init: illegal format for signal %d, record %s\n",
+		    //   s, record);
+	    return (-2);
+	}
+	hs->info.spf = 1;
+	hs->skew = 0;
+	hs->start = 0L;
+	while (*(++p)) {
+	    if (*p == 'x' && *(++p))
+		if ((hs->info.spf = atoi(p)) < 1) hs->info.spf = 1;
+	    if (*p == ':' && *(++p))
+		if ((hs->skew = atoi(p)) < 0) hs->skew = 0;
+	    if (*p == '+' && *(++p))
+		if ((hs->start = atol(p)) < 0L) hs->start = 0L;
+	}
+	/* The resolution for deskewing is one frame.  The skew in samples
+	   (given in the header) is converted to skew in frames here. */
+	hs->skew = (int8_t)(((int32_t)hs->skew)/hs->info.spf + 0.5);
+
+	/* Determine the gain in ADC units per physical unit.  This number
+	   may be zero or missing;  if so, the signal is uncalibrated. */
+	if (p = strtok((char *)NULL, sep))
+	    hs->info.gain = (WFDB_Gain)atof(p);
+	else
+	    hs->info.gain = (WFDB_Gain)0.;
+
+	/* Determine the baseline if specified, and the physical units
+	   (assumed to be millivolts unless otherwise specified). */
+	nobaseline = 1;
+	if (p) {
+	    for ( ; *p && *p != '(' && *p != '/'; p++)
+		;
+	    if (*p == '(') {
+		hs->info.baseline = atoi(++p);
+		nobaseline = 0;
+	    }
+	    while (*p)
+		if (*p++ == '/' && *p)
+		    break;
+	}
+	if (p && *p) {
+	    if ((hs->info.units=(char *)malloc(WFDB_MAXUSL+1)) == NULL) {
+		// // wfdb_error("init: insufficient memory\n");
+		return (-2);
+	    }
+	    (void)strncpy(hs->info.units, p, WFDB_MAXUSL);
+	}
+	else
+	    hs->info.units = NULL;
+
+	/* Determine the ADC resolution in bits.  If this number is
+	   missing and cannot be inferred from the format, the default
+	   value (from wfdb.h) is filled in. */
+	if (p = strtok((char *)NULL, sep))
+	    i = (unsigned)atoi(p);
+	else switch (hs->info.fmt) {
+	  case 80: i = 8; break;
+	  case 160: i = 16; break;
+	  case 212: i = 12; break;
+	  case 310: i = 10; break;
+	  case 311: i = 10; break;
+	  default: i = WFDB_DEFRES; break;
+	}
+	hs->info.adcres = i;
+
+	/* Determine the ADC zero (assumed to be zero if missing). */
+	hs->info.adczero = (p = strtok((char *)NULL, sep)) ? atoi(p) : 0;
+	    
+	/* Set the baseline to adczero if no baseline field was found. */
+	if (nobaseline) hs->info.baseline = hs->info.adczero;
+
+	/* Determine the initial value (assumed to be equal to the ADC 
+	   zero if missing). */
+	hs->info.initval = (p = strtok((char *)NULL, sep)) ?
+	    atoi(p) : hs->info.adczero;
+
+	/* Determine the checksum (assumed to be zero if missing). */
+	if (p = strtok((char *)NULL, sep)) {
+	    hs->info.cksum = atoi(p);
+	    hs->info.nsamp = ns;
+	}
+	else {
+	    hs->info.cksum = 0;
+	    hs->info.nsamp = (WFDB_Time)0L;
+	}
+
+	/* Determine the block size (assumed to be zero if missing). */
+	hs->info.bsize = (p = strtok((char *)NULL, sep)) ? atoi(p) : 0;
+
+	/* Check that formats and block sizes match for signals beint16_ting
+	   to the same group. */
+	if (s && hs->info.group == hp->info.group &&
+	    (hs->info.fmt != hp->info.fmt ||
+	     hs->info.bsize != hp->info.bsize)) {
+	    // // wfdb_error("init: error in specification of signal %d or %d\n",
+		       s-1, s);
+	    return (-2);
+	}
+	    
+	/* Get the signal description.  If missing, a description of
+	   the form "record xx, signal n" is filled in. */
+	if ((hs->info.desc = (char *)malloc(WFDB_MAXDSL+1)) == NULL) {
+	    // // wfdb_error("init: insufficient memory\n");
+	    return (-2);
+	}
+	if (p = strtok((char *)NULL, "\n\r"))
+	    (void)strncpy(hs->info.desc, p, WFDB_MAXDSL);
+	else
+	  //  (void)sprint8_tf(hs->info.desc,
+		//	  "record %s, signal %d", record, s);
+    }
+    return (s);			/* return number of available signals */
 }
 
 
 
-static void isigclose(void)
-{/*
-    struct isdata *is;
-    struct igdata *ig;
 
-    if (nisig == 0) return;
-    if (sbuf && !in_msrec) {
-	(void)free(sbuf);
-	sbuf = NULL;
-	sample_vflag = 0;
-    }
-    if (isd) {
-	while (nisig)
-	    if (is = isd[--nisig]) {
-		if (is->info.fname) (void)free(is->info.fname);
-		if (is->info.units) (void)free(is->info.units);
-		if (is->info.desc)  (void)free(is->info.desc);
-		(void)free(is);
-	    }
-	(void)free(isd);
-	isd = NULL;
-    }
-    else
-	nisig = 0;
-    maxisig = 0;
-
-    if (igd) {
-	while (nigroups)
-	    if (ig = igd[--nigroups]) {
-		if (ig->fp) (void)wfdb_fclose(ig->fp);
-		if (ig->buf) (void)free(ig->buf);
-		(void)free(ig);
-	    }
-	(void)free(igd);
-	igd = NULL;
-    }
-    else
-	nigroups = 0;
-    maxigroup = 0;
-
-    istime = 0L;
-    gvc = ispfmax = 1;
-    if (hheader) {
-	(void)wfdb_fclose(hheader);
-	hheader = NULL;
-    }
-    if (nosig == 0 && maxhsig != 0)
-	hsdfree();*/
-}
 
 
 //Return:
@@ -273,7 +919,7 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:esto e
 	int8_t navail, ngroups, nn;
     struct hsdata *hs;
     struct isdata *is;
-    struct igdata *ig;
+    //struct igdata *ig;
     WFDB_Signal s, si, sj;
     WFDB_Group g;
 
@@ -306,10 +952,10 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:esto e
     if (nsig <= 0) {  //nsign=0
 		nsig = -nsig;
 		if (navail < nsig) nsig = navail;
-		//siarray=NULL
-		/*if (siarray != NULL)  
+	
+		if (siarray != NULL)  
 		    for (s = 0; s < nsig; s++)
-				siarray[s] = hsd[s]->info;*/
+				siarray[s] = hsd[s]->info;
 		in_msrec = 0;	// necessary to avoid errors when reopening 
 		return (navail);   //-->no estoy segura pero se suponeq si aqui entra porq nsig=0 y aqui hace return
 						   //el resto del metodo no se ejecuta y se puede comentar
@@ -324,9 +970,9 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:esto e
     // Allocate input signals and signal group workspace.
     nn = nisig + nsig;
     if (allocisig(nn) != nn)
-	return (-1);	// failed, nisig is unchanged, allocisig emits error
+		return (-1);	// failed, nisig is unchanged, allocisig emits error
     else
-	nsig = nn;
+		nsig = nn;
     nn = nigroups + hsd[nsig-nisig-1]->info.group + 1;
     if (allocigroup(nn) != nn)
 	return (-1);	// failed, allocigroup emits error
@@ -454,16 +1100,16 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:esto e
 //-----------------------------------------------setifreq--------------------------------------------------
 static int rgetvec(WFDB_Sample *vector)
 {
-    WFDB_Sample *tp;
+   /* WFDB_Sample *tp;
     WFDB_Signal s;
     static int stat;
 
     if (ispfmax < 2)	/* all signals at the same frequency */
-	return (getframe(vector));
+	/*return (getframe(vector));
 
     if (gvmode != WFDB_HIGHRES) {/* return one sample per frame, decimating
 				   (by averaging) if necessary */
-	unsigned c;
+/*	unsigned c;
 	long v;
 	
 	stat = getframe(tvector);
@@ -477,7 +1123,7 @@ static int rgetvec(WFDB_Sample *vector)
     }
     else {			/* return ispfmax samples per frame, using
 				   zero-order interpolation if necessary */
-	if (gvc >= ispfmax) {
+	/*if (gvc >= ispfmax) {
 	    stat = getframe(tvector);
 	    gvc = 0;
 	}
@@ -489,7 +1135,7 @@ static int rgetvec(WFDB_Sample *vector)
 	}
 	gvc++;
     }
-    return (stat);
+    return (stat);*/
 }
 
 
@@ -501,8 +1147,8 @@ int8_t setifreq(WFDB_Frequency f){
 	nisig=1;//esto lo meto yo porq creo que tiene este valor
 	nvsig=nisig; //esto lo añadimos nosotras porq sabemos que es el mismo valor 
 	
-	gv0 = (WFDB_Sample*)realloc(gv0, nisig*sizeof(WFDB_Sample));
-	gv1 = (WFDB_Sample*)realloc(gv1, nisig*sizeof(WFDB_Sample));
+	//gv0 = (WFDB_Sample*)realloc(gv0, nisig*sizeof(WFDB_Sample));
+	//gv1 = (WFDB_Sample*)realloc(gv1, nisig*sizeof(WFDB_Sample));
 	if (gv0 == NULL || gv1 == NULL) {
 	    //wfdb_error("setifreq: too many (%d) input signals\n", nisig);
 	    if (gv0) (void)free(gv0);
@@ -584,18 +1230,18 @@ static unsigned noaf;		/* number of open output annotators */
 double tmul;		/* `time' fields in annotations are
 				   tmul * times in annotation files */
 int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){ //sabemos n=0
-	unsigned annwd;
+	/*unsigned annwd;
     char *ap;
     int i, len;
     long delta;
-    WFDB_Time t;
+    WFDB_Time t;*/
     //struct oadata *oa;
 
    /* if (n >= noaf || (oa = oad[n]) == NULL || oa->file == NULL) {
 		//printf("putann: can't write annotation file %d\n", n);
 	return (-2);
     }*/
-    if (annot->time == 0L)
+   /* if (annot->time == 0L)
 		t = 0L;
     else {
 		if (tmul <= 0.0) {
@@ -614,7 +1260,7 @@ int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){ //sabemos n=0
     }
     switch (oa->info.stat) {
       case WFDB_WRITE:	/* MIT-format output file */
-      default:
+   /*   default:
 	if (annot->anntyp == 0) {
 	    /* The caller intends to write a null annotation here, but putann
 	       must not write a word of zeroes that would be interpreted as
