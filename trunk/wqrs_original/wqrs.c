@@ -253,9 +253,11 @@ main(int argc, char **argv)
 	exit(1);
     }
 
+    
     if (gvmode == 0 && (p = getenv("WFDBGVMODE")))
 	gvmode = atoi(p);
     setgvmode(gvmode|WFDB_GVPAD);
+    printf("gvmode %d\n, p %d\n",gvmode,p);
 
     if ((nsig = isigopen(record, NULL, 0)) < 1) exit(2);
     printf("%d",nsig);
