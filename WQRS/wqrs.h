@@ -6,12 +6,12 @@
 //Definicion de tipos
 typedef int16_t	     WFDB_Sample;   /* units are adus */
 typedef int16_t 	 WFDB_Time;	    /* units are sample intervals */
-typedef int32_t	 WFDB_Gain;	    /* units are adus per physical unit */
+typedef double	 WFDB_Gain;	    /* units are adus per physical unit */
 typedef uint8_t WFDB_Group;    /* signal group number */
 typedef uint8_t WFDB_Signal;   /* signal number */
 typedef uint8_t WFDB_Annotator;/* annotator number */
-typedef int32_t	     WFDB_Frequency;/* units are Hz (samples/second/signal) */
-typedef long	     WFDB_Date;	    /* units are days */
+typedef double	     WFDB_Frequency;/* units are Hz (samples/second/signal) */
+typedef int16_t	     WFDB_Date;	    /* units are days */
 
 //Estructuras
 struct WFDB_anninfo {	/* annotator information structure */

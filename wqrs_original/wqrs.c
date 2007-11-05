@@ -256,11 +256,12 @@ main(int argc, char **argv)
     
     if (gvmode == 0 && (p = getenv("WFDBGVMODE")))
 	gvmode = atoi(p);
+	
     setgvmode(gvmode|WFDB_GVPAD);
-    printf("gvmode %d\n, p %d\n",gvmode,p);
+    
 
     if ((nsig = isigopen(record, NULL, 0)) < 1) exit(2);
-    printf("%d",nsig);
+    
     if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
 	(void)fprintf(stderr, "%s: insufficient memory\n", pname);
 	exit(2);
@@ -270,7 +271,7 @@ main(int argc, char **argv)
     if (sig < 0 || sig >= nsig) sig = 0;
     if ((gain = s[sig].gain) == 0.0) gain = WFDB_DEFGAIN;
     sps = sampfreq((char *)NULL);
-    printf("sps %d",sps);
+ 
     if (Rflag) {
     	if (PWFreq == 60.0) setifreq(sps = 120.);
     	else setifreq(sps = 150.);
@@ -285,6 +286,8 @@ main(int argc, char **argv)
     }
     else
 	to = strtim("e");
+	   
+	
 
     annot.subtyp = annot.num = 0;
     annot.chan = sig;
@@ -303,6 +306,7 @@ main(int argc, char **argv)
     LTwindow = sps * MaxQRSw;     /* length transform window size */
 
     (void)sample(sig, 0L);
+    
     if (dflag) {
 	for (t = from; t < to || (to == 0L && sample_valid()); t++)
 	    printf("%6d\t%6d\n", sample(sig, t), ltsamp(t));
