@@ -159,8 +159,8 @@ WFDB_Sample ltsamp(WFDB_Time t)
 
 main(int8_t argc, char **argv)
 { 
-    char *p;
-    char *record = NULL;	     /* input record name */
+    //char *p;				// toma valor de getenv(...)-> siempre vale 0
+   // char *record = NULL;	     /* input record name */
     float sps;			     /* sampling frequency, in Hz (SR) */
     float samplingInterval;          /* sampling interval, in milliseconds */
     int8_t i, max, min, minutes = 0, onset, timer;
@@ -187,7 +187,7 @@ main(int8_t argc, char **argv)
     	int8_t dflag = 0;		     // if non-zero, dump raw and filtered samples only;  do not run detector 
     	int8_t jflag = 0;		     // if non-zero, annotate J-points 
     	int8_t vflag = 0;
-    	WFDB_Time 
+    	
     	    
     */
    
@@ -231,9 +231,9 @@ main(int8_t argc, char **argv)
 		//(void)fprintf(stderr, "%s: input record name must follow -r\n",  pname);
 		exit(1);
 	    }
-	    record = argv[i];
+	    //record = argv[i];
 	    break;
-	  case 'R':	/* resample */
+	  case 'R':	// resample 
 	    Rflag = 1;
 	    break;
 	 /* case 's':	// signal 
@@ -262,29 +262,32 @@ main(int8_t argc, char **argv)
 	    exit(1);
 	}
     }
-    if (record == NULL) {
+    /*if (record == NULL) {
 		
 		exit(1);
-    }
+    }*/
 
 
    // if (gvmode == 0 && (p = getenv("WFDBGVMODE")))
-	//gvmode = atoi(p);  -->no se q es wfdbgvmode, nos lo tragamos hasta entenderlo
+	//gvmode = atoi(p);  -->gvmode=0 siempre
     setgvmode(gvmode|WFDB_GVPAD);
 
     //if ((nsig = isigopen(record, NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
+    nsig=1;
+    
     if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
 	//(void)fprintf(stderr, "%s: insufficient memory\n", pname);
 	//	printf("%s: insufficient memory\n", pname);
 	exit(2);
     }
     a.name = "wqrs"; a.stat = WFDB_WRITE;
-    if ((nsig = wfdbinit(record, &a, 1, s, nsig)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
+    if ((nsig = wfdbinit("100"/*record*/, &a, 1, s, nsig)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
     
     
-    if (sig < 0 || sig >= nsig) sig = 0;
+    //if (sig < 0 || sig >= nsig) sig = 0;  
+    sig=0;//analizamos una sola señal
     if ((gain = s[sig].gain) == 0.0) gain = WFDB_DEFGAIN;
-    sps = 0; //sampfreq((char *)NULL); no hace falta usar este metodo, ya he comprobado que es 0
+    sps = sfreq; //sampfreq((char *)NULL); no hace falta usar este metodo, ya he comprobado que es 0
     if (Rflag) {  
     	if (PWFreq == 60.0) setifreq(sps = 120.);
     	else setifreq(sps = 150.); //solo deberia quedarse esta opcion
@@ -377,7 +380,7 @@ main(int8_t argc, char **argv)
 				    (void)sample(sig, tpq);
 				    if (sample_valid() == 0) break;
 				    /* Record an annotation at the QRS onset */
-				    annot.time = tpq;
+				    annot.time = tpq;   //aqui hemos encontrado un qrs cuyo inicio es tpq!!!!!!!!!
 				    annot.anntyp = NORMAL;
 				    if (putann(0, &annot) < 0) { /* write the annotation */
 						//wfdbquit();	// close files if an error occurred 
@@ -422,6 +425,7 @@ main(int8_t argc, char **argv)
 		}
 	
 		/* Keep track of progress by printing a dot for each minute analyzed */
+		//esto es una chorrada
 		if (t >= next_minute) {
 		    next_minute += spm;
 		    //(void)fprintf(stderr, ".");

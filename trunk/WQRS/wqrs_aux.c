@@ -275,7 +275,7 @@ WFDB_Sample sample(WFDB_Signal s, WFDB_Time t){
 //0: The most recent t given to sample follows the end of the record 
 //-1: The most recent value returned by sample was invalid (because signal s is not available at time t) 
 int8_t sample_valid(void){
-	//return 0;   //corregir esta funcion 
+	
 	 return (sample_vflag);	
 }
 
@@ -290,8 +290,9 @@ void setgvmode(int8_t mode){
         if (p = getenv("WFDBGVMODE"))
 	    mode = atoi(p);
 	else
-	    mode = DEFWFDBGVMODE;
+	    mode = DEFWFDBGVMODE;  // igual A  WFDB_LOWRES
     }*/
+    mode = WFDB_LOWRES; //modo por defecto
 
     if ((mode & WFDB_HIGHRES) == WFDB_HIGHRES) {  
 		gvmode = WFDB_HIGHRES;
@@ -1400,11 +1401,11 @@ WFDB_Time strtim(char *string){
 	if (days > 0L) t += (WFDB_Time)(days*24*60*60*f);
 	return (-t);*/
       default:  //no me pego con los atof de aqui porq nunca va a entar
-	//x = atof(string);
+		x = atof(string);
 	if ((p = strchr(string, ':')) == NULL) return ((int16_t)(x*f + 0.5));
-	//y = atof(++p);
+	y = atof(++p);
 	if ((p = strchr(p, ':')) == NULL) return ((int16_t)((60.*x + y)*f + 0.5));
-	//z = atof(++p);
+	z = atof(++p);
 	return ((WFDB_Time)((3600.*x + 60.*y + z)*f + 0.5));
     }	
 	
