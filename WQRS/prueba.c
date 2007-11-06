@@ -1,24 +1,18 @@
-
-   #include <stdio.h>
-#include <string.h>
+#include <stdio.h>
 
 int main()
 {
-   char s1[5] = "Abeja";
-   char s2[5] = "abeja";
-   int i;
+   char nombre[20]="", entrada[81]="";
+   unsigned int edad=0;
+	int i;
+   printf( "Escriba su nombre y edad, separados por un espacio:\n" );
+   gets( entrada );
+   i=sscanf( entrada, "%s %u", nombre, &edad );
 
-   printf( "s1=%s\t", s1 );
-   printf( "s2=%s\n", s2 );
-
-   i = strcmp( s1, s2 );
-   printf( "s1 es " );
-   if( i < 0 )  printf( "menor que" );
-   else if( i > 0 )  printf( "mayor que" );
-   else  printf( "igual a" );
-   printf( " s2\n" );
+   printf( "Has escrito: %s\n", entrada );
+   printf( "Nombre: %s. Edad: %d\n", nombre, edad );
+   printf("%d",i);
 
    return 0;
 }
-
 
