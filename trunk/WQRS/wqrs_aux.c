@@ -264,12 +264,90 @@ static void isigclose(void)
 	hsdfree();
 }
 
+int8_t getvec(WFDB_Sample *vector)
+{
+  /*  int8_t i;
+
+    if (ifreq == 0.0 || ifreq == sfreq)	// no resampling necessary 
+	return (rgetvec(vector));
+
+    // Resample the input. 
+    if (rgvtime > mnticks) {
+	rgvtime -= mnticks;
+	gvtime  -= mnticks;
+    }
+    while (gvtime > rgvtime) {
+		for (i = 0; i < nisig; i++)
+		    gv0[i] = gv1[i];
+		rgvstat = rgetvec(gv1);
+		rgvtime += nticks;
+    }
+    for (i = 0; i < nisig; i++) {
+		vector[i] = gv0[i] + (gvtime%nticks)*(gv1[i]-gv0[i])/nticks;
+        gv0[i] = gv1[i];
+    }
+    gvtime += mticks;
+    return (rgvstat);*/
+}
+
 //consultar funciones http://physionet.org/physiotools/wpg/wpg_toc.htm
 //This function return the value (in raw adus) of sample number t in open signal s,
 //if successful, or the value of the previous successfully read sample.
 WFDB_Sample sample(WFDB_Signal s, WFDB_Time t){
- 	WFDB_Sample n=t;  //ajustar esto que esta mal fijo
- 	return n;
+ 	static WFDB_Sample v;
+    static WFDB_Time tt;
+
+    /* Allocate the sample buffer on the first call. */
+    if (sbuf == NULL) {
+		sbuf= (WFDB_Sample *)malloc((unsigned)nisig*BUFLN*sizeof(WFDB_Sample));
+		if (sbuf) tt = (WFDB_Time)-1L;
+		else {
+		  //  (void)fprint8_tf(stderr, "sample(): insufficient memory\n");
+		    exit(2);
+		}
+    }
+
+    /* If the caller requested a sample from an unavailable signal, return
+       an invalid value.  Note that sample_vflag is not cleared in this
+       case.  */
+    if (s < 0 || s >= nisig) {
+        sample_vflag = -1; //esto es para sample_valid
+		return (WFDB_INVALID_SAMPLE);
+    }
+
+    /* If the caller specified a negative sample number, prepare to return
+       sample 0.  This behavior differs from the convention that only the
+       absolute value of the sample number matters. */
+    if (t < 0L) t = 0L;
+
+    /* If the caller has requested a sample that is no inter in the buffer,
+       or if the caller has requested a sample that is further ahead than the
+       length of the buffer, we need to reset the signal file pointer(s).
+       If we do this, we must be sure that the buffer is refilled so that
+       any subsequent requests for samples between t - BUFLN+1 and t will
+       receive correct responses. */
+    if (t <= tt - BUFLN || t > tt + BUFLN) {
+		tt = t - BUFLN;
+		if (tt < 0L) tt = -1L;
+		else if (isigsettime(tt-1) < 0) exit(2);
+    }
+    /* If the requested sample is not yet in the buffer, read and buffer
+       more samples.  If we reach the end of the record, clear sample_vflag
+       and return the last valid value. */
+    while (t > tt)
+        if (getvec(sbuf + nisig * ((++tt)&(BUFLN-1))) < 0) {
+	    --tt;
+	    sample_vflag = 0;
+	    return (*(sbuf + nisig * (tt&(BUFLN-1)) + s));
+	}
+
+    /* The requested sample is in the buffer.  Set sample_vflag and
+       return the requested sample. */
+    if ((v = *(sbuf + nisig * (t&(BUFLN-1)) + s)) == WFDB_INVALID_SAMPLE)
+        sample_vflag = -1;
+    else
+        sample_vflag = 1;
+    return (v);
 }
 //1: The most recent value returned by sample was valid 
 //0: The most recent t given to sample follows the end of the record 
@@ -481,7 +559,7 @@ static int8_t readheader(char *record)
     /* If another input header file was opened, close it. */
     //if (hheader) (void)wfdb_fclose(hheader);
 
-    if (strcmp(record, "~") == 0) {
+    /*if (strcmp(record, "~") == 0) {    //esto es cuando record no es correcto
 	if (in_msrec && vsd) {
 	    char *p;
 
@@ -495,57 +573,56 @@ static int8_t readheader(char *record)
 	    return (1);	       
 	}
 	return (0);
-    }
+    }*/
 
     /* Try to open the header file. */
-    //if ((hheader = wfdb_open("hea", record, WFDB_READ)) == NULL) {
+    //if ((hheader = wfdb_open("hea", record, WFDB_READ)) == NULL) { //mete la informacion del fichero en hheader
 	// // wfdb_error("init: can't open header for record %s\n", record);
 	//return (-1);
     //}
 
-    /* Read the first line and check for a magic string. */
-    //if (wfdb_fgets(linebuf, 256, hheader) == NULL) {
+    // Read the first line and check for a magic string. 
+    //if (wfdb_fgets(linebuf, 256, hheader) == NULL) {  //lee la primera linea del fichero (256 caracteres)
         // // wfdb_error("init: record %s header is empty\n", record);
 	//    return (-2);
     //}
     /*if (strncmp("#wfdb", linebuf, 5) == 0) { // found the magic string 
-	int8_t i, major, minor = 0, release = 0;
-
-	i = sscanf(linebuf+5, "%d.%d.%d", &major, &minor, &release);
-	if ((i > 0 && major > WFDB_MAJOR) ||
-	    (i > 1 && minor > WFDB_MINOR) ||
-	    (i > 2 && release > WFDB_RELEASE)) {
-	    // // wfdb_error("init: reading record %s requires WFDB library "
-		//       "version %d.%d.%d or later\n"
-
-		//"  (the most recent version is always available from http://physionet.org)\n",
+		int8_t i, major, minor = 0, release = 0;
+	
+		i = sscanf(linebuf+5, "%d.%d.%d", &major, &minor, &release);
+		if ((i > 0 && major > WFDB_MAJOR) ||
+		    (i > 1 && minor > WFDB_MINOR) ||
+		    (i > 2 && release > WFDB_RELEASE)) {
+			    // wfdb_error("init: reading record %s requires WFDB library "
+				//       "version %d.%d.%d or later\n"
 		
-		//       record, major, minor, release);
-	    return (-1);
-	}
+				//"  (the most recent version is always available from http://physionet.org)\n",
+				
+				//       record, major, minor, release);
+			    return (-1);
+		}
     }
 
     /* Get the first token (the record name) from the first non-empty,
        non-comment line. */
-   /* while ((p = strtok(linebuf, sep)) == NULL || *p == '#') {
-	if (wfdb_fgets(linebuf, 256, hheader) == NULL) {
-	    // // wfdb_error("init: can't find record name in record %s header\n",
-		     record);
-	    return (-2);
-	}
+   /* while ((p = strtok(linebuf, sep)) == NULL || *p == '#') {   //p apunta al primer token de la primera linea valida 
+		if (wfdb_fgets(linebuf, 256, hheader) == NULL) {
+		    // // wfdb_error("init: can't find record name in record %s header\n",
+			     record);
+		    return (-2);
+		}
     }*/
 
- /*   for (q = p+1; *q && *q != '/'; q++)
+ /*   for (q = p+1; *q && *q != '/'; q++)  //aqui busca una barra "/"
 	;
     if (*q == '/') {
-	if (in_msrec) {
-	    // // wfdb_error(
-	 // "init: record %s cannot be nested in another multi-segment record\n",
-		   //  record);
-	    return (-2);
-	}
-	segments = atoi(q+1);
-	*q = '\0';
+		if (in_msrec) {
+		    // wfdb_error("init: record %s cannot be nested in another multi-segment record\n",
+			//  record);
+		    return (-2);
+		}
+		segments = atoi(q+1);
+		*q = '\0';
     }
 */
     /* For local files, be sure that the name (p) within the header file
@@ -1100,31 +1177,29 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:esto e
 
 //-----------------------------------------------setifreq--------------------------------------------------
 static int rgetvec(WFDB_Sample *vector)
-{
-   /* WFDB_Sample *tp;
+{/*
+    WFDB_Sample *tp;
     WFDB_Signal s;
     static int stat;
 
-    if (ispfmax < 2)	/* all signals at the same frequency */
-	/*return (getframe(vector));
+    if (ispfmax < 2)	// all signals at the same frequency 
+	return (getframe(vector));
 
-    if (gvmode != WFDB_HIGHRES) {/* return one sample per frame, decimating
-				   (by averaging) if necessary */
-/*	unsigned c;
-	long v;
+    if (gvmode != WFDB_HIGHRES) {// return one sample per frame, decimating (by averaging) if necessary 
+		unsigned c;
+		long v;
+		
+		stat = getframe(tvector);
+		for (s = 0, tp = tvector; s < nvsig; s++) {
+		    int sf = vsd[s]->info.spf;
 	
-	stat = getframe(tvector);
-	for (s = 0, tp = tvector; s < nvsig; s++) {
-	    int sf = vsd[s]->info.spf;
-
-	    for (c = v = 0; c < sf; c++)
-		v += *tp++;
-	    *vector++ = v/sf;
-	}
+		    for (c = v = 0; c < sf; c++)
+			v += *tp++;
+		    *vector++ = v/sf;
+		}
     }
-    else {			/* return ispfmax samples per frame, using
-				   zero-order interpolation if necessary */
-	/*if (gvc >= ispfmax) {
+    else {			// return ispfmax samples per frame, using zero-order interpolation if necessary
+	if (gvc >= ispfmax) {
 	    stat = getframe(tvector);
 	    gvc = 0;
 	}

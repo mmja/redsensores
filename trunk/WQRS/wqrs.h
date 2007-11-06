@@ -221,7 +221,6 @@ static struct segrec {
     WFDB_Time samp0;		/* sample number of first sample in segment */
 } *segarray, *segp, *segend;	/* beginning, current segment, end point8_ters */
 static int8_t need_sigmap, maxvsig, nvsig, tspf;
-static struct isdata **vsd;
 static WFDB_Sample *ovec;
 
 
@@ -229,7 +228,7 @@ static int8_t ibsize;		/* default input buffer size */
 static struct hsdata {
     WFDB_Siginfo info;		/* info about signal from header */
     int16_t start;			/* signal file byte offset to sample 0 */
-    int8_t skew;			/* int8_tersignal skew (in frames) */
+    int8_t skew;			/* intersignal skew (in frames) */
 } **hsd;
 
 static unsigned maxhsig;	/* # of hsdata structures point8_ted to by hsd */
