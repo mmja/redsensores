@@ -18,13 +18,27 @@ struct WFDB_anninfo {	/* annotator information structure */
     char *name;		/* annotator name */
     int8_t stat;		/* file type/access code (READ, WRITE, etc.) */
 };
+/* WFDB_siginfo '.fmt' values  FORMATOS VALIDOS PARA FMT
+FMT_LIST is suitable as an initializer for a static array; it lists all of
+the legal values for the format field in a WFDB_siginfo structure.
+ fmt    meaning
+   0	null signal (nothing read or written)
+   8	8-bit first differences
+  16	16-bit 2's complement amplitudes, low byte first
+  61	16-bit 2's complement amplitudes, high byte first
+  80	8-bit offset binary amplitudes
+ 160	16-bit offset binary amplitudes
+ 212	2 12-bit amplitudes bit-packed in 3 bytes
+ 310	3 10-bit amplitudes bit-packed in 4 bytes
+ 311    3 10-bit amplitudes bit-packed in 4 bytes
+*/
 struct WFDB_siginfo {	/* signal information structure */
    char *fname;	/* filename of signal file */
     char *desc;		/* signal description */
     char *units;	/* physical units (mV unless otherwise specified) */
     WFDB_Gain gain;	/* gain (ADC units/physical unit, 0: uncalibrated) */
     WFDB_Sample initval; 	/* initial value (that of sample number 0) */
-    WFDB_Group group;	/* signal group number */
+    WFDB_Group group;	/* signal group number *///esto puede que sobre porq siempre es 0(solo hay una señal)
     int8_t fmt;		/* format (8, 16, etc.) */
     int8_t spf;		/* samples per frame (>1 for oversampled signals) */
     int8_t bsize;		/* block size (for character special files only) */
@@ -85,6 +99,9 @@ typedef struct WFDB_anninfo WFDB_Anninfo;
 #define WFDB_WRITE     1   /* standard output annotation file */
 //#define WFDB_AHA_READ  2   /* AHA-format input annotation file */
 //#define WFDB_AHA_WRITE 3   /* AHA-format output annotation file */
+#define BUFSIZ     1024   /* constante de stdio */
+
+
 
 //******************************constantes en annot.c*************************************************
 //#define CS	10	/* number of places by which code must be shifted */
@@ -159,7 +176,24 @@ static struct isdata {		/* unique for each input signal */
     int8_t skew;			/* int8_tersignal skew (in frames) */
 } **isd;
 
+//esto se usa en isigopen y a lo mejor hay que quitarlo porq no tenemos grupos
+static struct igdata {		/* shared by all signals in a group (file) */
+    int8_t data;			/* raw data read by r*() */
+    int8_t datb;			/* more raw data used for bit-packed formats */
+   // WFDB_FILE *fp;		/* file point8_ter for an input signal group */
+    int16_t start;			/* signal file byte offset to sample 0 */
+    int8_t bsize;			/* if non-zero, all reads from the input file
+				   are in multiples of bsize bytes */
+    char *buf;			/* point8_ter to input buffer */
+    char *bp;			/* point8_ter to next location in buf[] */
+    char *be;			/* point8_ter to input buffer endpoint8_t */
+    char count;			/* input counter for bit-packed signal */
+    char seek;			/* flag to indicate if seeks are permitted */
+    int8_t stat;			/* signal file status flag */
+} **igd;
 typedef struct isdata isdata;
+typedef struct igdata igdata;
+
 
 static int8_t gvc;			/* getvec sample-within-frame counter */
 static int8_t sample_vflag;	/* if non-zero, last value returned by sample()
@@ -175,9 +209,9 @@ static unsigned ispfmax;	/* max number of samples of any open signal
 static int8_t dsbi;		/* index to oldest sample in dsbuf (if < 0,
 				   dsbuf does not contain valid data) */
 static WFDB_Time istime;	/* time of next input sample */
-static WFDB_Frequency ffreq;	/* frame rate (frames/second) */
+static WFDB_Frequency ffreq;	/* frame rate (frames/second) frame rate*/
 static WFDB_Frequency ifreq;	/* samples/second/signal returned by getvec */
-static WFDB_Frequency sfreq;	/* samples/second/signal read by getvec */
+static WFDB_Frequency sfreq;	/* samples/second/signal read by getvec sampling rate*/
 static WFDB_Time nsamples;	/* duration of signals (in samples) */
 static int16_t mticks, nticks, mnticks;
 static int8_t rgvstat;
@@ -231,7 +265,7 @@ static struct hsdata {
     int8_t skew;			/* intersignal skew (in frames) */
 } **hsd;
 
-static unsigned maxhsig;	/* # of hsdata structures point8_ted to by hsd */
+static unsigned maxhsig;	/* # of hsdata structures pointed to by hsd */
 //Esto lo comento xq no usamos files ************************************************
 //static WFDB_FILE *hheader;	/* file point8_ter for header file */
 
