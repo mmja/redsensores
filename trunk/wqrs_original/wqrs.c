@@ -252,22 +252,23 @@ main(int argc, char **argv)
 	help();
 	exit(1);
     }
-
+	printf("bufsiz %d",BUFSIZ);
     
     if (gvmode == 0 && (p = getenv("WFDBGVMODE")))
 	gvmode = atoi(p);
 	
     setgvmode(gvmode|WFDB_GVPAD);
     
-
+	
     if ((nsig = isigopen(record, NULL, 0)) < 1) exit(2);
-    
+   
     if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
 	(void)fprintf(stderr, "%s: insufficient memory\n", pname);
 	exit(2);
     }
     a.name = "wqrs"; a.stat = WFDB_WRITE;
     if ((nsig = wfdbinit(record, &a, 1, s, nsig)) < 1) exit(2);
+   
     if (sig < 0 || sig >= nsig) sig = 0;
     if ((gain = s[sig].gain) == 0.0) gain = WFDB_DEFGAIN;
     sps = sampfreq((char *)NULL);
