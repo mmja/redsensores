@@ -30,6 +30,7 @@ static int8_t make_vsd(void){
 		unsigned m = maxvsig;
 		struct isdata **vsdnew;
 		//vsdnew= (isdata **)realloc(vsd, nvsig*sizeof(struct isdata *));
+		vsdnew=(isdata **)malloc(nvsig*sizeof(struct isdata *)); //????
 	
 		if (vsdnew == NULL) {
 		    // // wfdb_error("init: too many (%d) input signals\n", nvsig);
@@ -49,11 +50,11 @@ static int8_t make_vsd(void){
     }
 
     for (i = 0; i < nvsig; i++)
-	copysi(&vsd[i]->info, &isd[i]->info);
+		copysi(&vsd[i]->info, &isd[i]->info); //copia los info de isd a vsd
 
     return (nvsig);
 }
-//maneja los mapas de señales
+//maneja los mapas de señales ->llena la estructura smi
 static int8_t sigmap_init(void)
 {
     int8_t i, j, k, kmax, s;
@@ -61,75 +62,73 @@ static int8_t sigmap_init(void)
 
     /* is this the layout segment?  if so, set up output side of map */
     if (in_msrec && ovec == NULL && isd[0]->info.nsamp == 0L) {
-	need_sigmap = 1;
-
-	/* The number of virtual signals is the number of signals defined
-	   in the layout segment. */
-	nvsig = nisig;
-	for (s = tspf = 0; s < nisig; s++)
-	    tspf += isd[s]->info.spf;
-	if ((smi = malloc(tspf * sizeof(struct sigmapinfo))) == NULL) {
-	    // // wfdb_error("sigmap_init: out of memory\n");
-	    return (-1);
-	}
-
-	for (i = s = 0; i < nisig; i++) {
-	    if (smi[s].desc = malloc(strlen(isd[i]->info.desc)+1))
-		strcpy(smi[s].desc, isd[i]->info.desc);
-	    else {
-		// // wfdb_error("sigmap_init: out of memory\n");
-		return (-1);
-	    }
-	    smi[s].gain = isd[i]->info.gain;
-	    smi[s].baseline = isd[i]->info.baseline;
-	    k = smi[s].spf = isd[i]->info.spf;
-	    for (j = 1; j < k; j++)
-		smi[s + j] = smi[s];
-	    s += k;	    
-	}
-
-	if ((ovec = malloc(tspf * sizeof(WFDB_Sample))) == NULL) {
-	    // // wfdb_error("sigmap_init: out of memory\n");
-	    return (-1);
-	}
-	return (make_vsd());
+		need_sigmap = 1;
+	
+		/* The number of virtual signals is the number of signals defined
+		   in the layout segment. */
+		nvsig = nisig;
+		for (s = tspf = 0; s < nisig; s++)
+		    tspf += isd[s]->info.spf;
+		if ((smi = malloc(tspf * sizeof(struct sigmapinfo))) == NULL) {
+		    // // wfdb_error("sigmap_init: out of memory\n");
+		    return (-1);
+		}
+	
+		for (i = s = 0; i < nisig; i++) {
+		    if (smi[s].desc = malloc(strlen(isd[i]->info.desc)+1))
+				strcpy(smi[s].desc, isd[i]->info.desc);
+		    else {
+				// // wfdb_error("sigmap_init: out of memory\n");
+				return (-1);
+		    }
+		    smi[s].gain = isd[i]->info.gain;
+		    smi[s].baseline = isd[i]->info.baseline;
+		    k = smi[s].spf = isd[i]->info.spf;
+		    for (j = 1; j < k; j++)
+				smi[s + j] = smi[s];
+		    s += k;	    
+		}
+	
+		if ((ovec = malloc(tspf * sizeof(WFDB_Sample))) == NULL) {
+		    // // wfdb_error("sigmap_init: out of memory\n");
+		    return (-1);
+		}
+		return (make_vsd());
     }
 
     else if (need_sigmap) {	/* set up the input side of the map */
-	for (s = 0; s < tspf; s++) {
-	    smi[s].index = 0;
-	    smi[s].scale = 0.;
-	    smi[s].offset = WFDB_INVALID_SAMPLE;
-	}
-
-	if (isd[0]->info.fmt == 0 && nisig == 1)
-	    return (0);    /* the current segment is a null record */
-
-	for (i = j = 0; i < nisig; j += isd[i++]->info.spf)
-	    for (s = 0; s < tspf; s += smi[s].spf)
-		if (strcmp(smi[s].desc, isd[i]->info.desc) == 0) {
-		    if ((kmax = smi[s].spf) != isd[i]->info.spf) {
-			// // wfdb_error( "sigmap_init: unexpected spf for signal %d in segment %s\n",  i, segp->recname);
-			if (kmax > isd[i]->info.spf)
-			    kmax = isd[i]->info.spf;
-		    }
-		    for (k = 0; k < kmax; k++) {
-			ps = &smi[s + k];
-			ps->index = j + k;
-			ps->scale = ps->gain / isd[i]->info.gain;
-			if (ps->scale < 1.0)
-			 //   // wfdb_error( "sigmap_init: loss of precision in signal %d in segment %s\n",  i, segp->recname);
-			ps->offset = ps->baseline -
-			             ps->scale * isd[i]->info.baseline;
-		    }
-		    break;
+		for (s = 0; s < tspf; s++) {
+		    smi[s].index = 0;
+		    smi[s].scale = 0.;
+		    smi[s].offset = WFDB_INVALID_SAMPLE;
 		}
+	
+		if (isd[0]->info.fmt == 0 && nisig == 1)
+		    return (0);    /* the current segment is a null record */
+	
+		for (i = j = 0; i < nisig; j += isd[i++]->info.spf)
+		    for (s = 0; s < tspf; s += smi[s].spf)
+			if (strcmp(smi[s].desc, isd[i]->info.desc) == 0) {
+			    if ((kmax = smi[s].spf) != isd[i]->info.spf) {
+					// // wfdb_error( "sigmap_init: unexpected spf for signal %d in segment %s\n",  i, segp->recname);
+					if (kmax > isd[i]->info.spf)
+					    kmax = isd[i]->info.spf;
+			    }
+			    for (k = 0; k < kmax; k++) {
+					ps = &smi[s + k];
+					ps->index = j + k;
+					ps->scale = ps->gain / isd[i]->info.gain;
+					if (ps->scale < 1.0)
+					 //   // wfdb_error( "sigmap_init: loss of precision in signal %d in segment %s\n",  i, segp->recname);
+					ps->offset = ps->baseline - ps->scale * isd[i]->info.baseline;
+			    }
+			    break;
+			}
     }
 
-    else {	/* normal record, or multisegment record without a dummy
-		   header */
-	nvsig = nisig;
-	return (make_vsd());
+    else {	/* normal record, or multisegment record without a dummy header */
+		nvsig = nisig;
+		return (make_vsd());
     }
 
     return (0);
@@ -496,7 +495,7 @@ static char irec[WFDB_MAXRNL+1]; // current record name, set by wfdb_setirec
 		    wfdb += 2;
 		}
 		else    //`%X' -> X, if X is neither `r', nor a non-zero digit
-			   followed by 'r' 
+			   //followed by 'r' 
 		    *p++ = *wfdb++;
 	    }
 	    else *p++ = *wfdb++;
@@ -748,6 +747,12 @@ static int8_t readheader(char *record)
 //-1 Failure: unable to read header file (probably incorrect record name) 
 //-2 Failure: incorrect header file format 
 
+//funciones
+//llama a metodos para abrir la cabecera, y llenar otras estructuras: hsd, vsd, smi
+//llena las estructuras igd e isd
+//reserva espacio para tvector y uvector y para dsbuf
+
+
 int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:esto en un principio se puede quitar pero cuidado con las variables internas
 	int8_t navail, ngroups, nn;
     struct hsdata *hs;
@@ -823,68 +828,58 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:esto e
 		is = isd[nisig+s];
 		ig = igd[nigroups+g];
 
-	// Find out how many signals are in this group. 
-        for (sj = si + 1; sj < navail; sj++)
-	  		if (hsd[sj]->info.group != hs->info.group) break;
-
-	// Skip this group if there are too few slots in the caller's array. 
-	if (sj - si > nsig - s) continue;
-
-	// Set the buffer size and the seek capability flag. 
-	if (hs->info.bsize < 0) {
-	    ig->bsize = hs->info.bsize = -hs->info.bsize;
-	    ig->seek = 0;
-	}
-	else {
-	    if ((ig->bsize = hs->info.bsize) == 0) ig->bsize = ibsize;
-	    ig->seek = 1;
-	}
-
-	// Skip this group if a buffer can't be allocated. 
-	if ((ig->buf = (char *)malloc(ig->bsize)) == NULL) continue;
-
-	// Check that the signal file is readable. 
-	if (hs->info.fmt == 0)
-	    ig->fp = NULL;	// Don't open a file for a null signal. 
-	else { 
-		//CONCLUSION: IG TIENE LA INFO DEL FICHERO 100.DAT y lo de los grupos a lo mejor nos sobra
-	    ig->fp = wfdb_open(hs->info.fname, (char *)NULL, WFDB_READ);
-	    // Skip this group if the signal file can't be opened. 
-	    if (ig->fp == NULL) {
-	        (void)free(ig->buf);
-		ig->buf = NULL;
-		continue;
-	    }
-	}
-
+		// Find out how many signals are in this group. 
+	        for (sj = si + 1; sj < navail; sj++)
+		  		if (hsd[sj]->info.group != hs->info.group) break;
 	
+		// Skip this group if there are too few slots in the caller's array. 
+		if (sj - si > nsig - s) continue;
 	
+		// Set the buffer size and the seek capability flag. 
+		if (hs->info.bsize < 0) {
+		    ig->bsize = hs->info.bsize = -hs->info.bsize;
+		    ig->seek = 0;
+		}
+		else {
+		    if ((ig->bsize = hs->info.bsize) == 0) ig->bsize = ibsize;
+		    ig->seek = 1;
+		}
 	
+		// Skip this group if a buffer can't be allocated. 
+		if ((ig->buf = (char *)malloc(ig->bsize)) == NULL) continue;
 	
-	//*************************************************************************************
-	//ESTAMOS AQUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+		// Check that the signal file is readable. 
+		if (hs->info.fmt == 0)
+		    ig->fp = NULL;	// Don't open a file for a null signal. 
+		else { 
+			//CONCLUSION: IG TIENE LA INFO DEL FICHERO 100.DAT y lo de los grupos a lo mejor nos sobra
+		    //ig->fp = wfdb_open(hs->info.fname, (char *)NULL, WFDB_READ);
+		    // Skip this group if the signal file can't be opened. 
+		    if (ig->fp == NULL) {
+		        (void)free(ig->buf);
+			ig->buf = NULL;
+			continue;
+		    }
+		}
 	
-	
-	
-	
-	// All tests passed -- fill in remaining data for this group.
-	ig->be = ig->bp = ig->buf + ig->bsize;
-	ig->start = hs->start;
-	ig->stat = 1;
-	while (si < sj && s < nsig) {
-	    if (copysi(&is->info, &hs->info) < 0) {
-		//  wfdb_error("isigopen: insufficient memory\n");
-		return (-3);
-	    }
-	    is->info.group = nigroups + g;
-	    is->skew = hs->skew;
-	    ++s;
-	    if (++si < sj) {
-			hs = hsd[si];
-			is = isd[nisig + s];
-	    }
-	}
-	g++;
+		// All tests passed -- fill in remaining data for this group.
+		ig->be = ig->bp = ig->buf + ig->bsize; //final=inicio=final del buffer
+		ig->start = hs->start;
+		ig->stat = 1;
+		while (si < sj && s < nsig) {
+		    if (copysi(&is->info, &hs->info) < 0) {
+			//  wfdb_error("isigopen: insufficient memory\n");
+			return (-3);
+		    }
+		    is->info.group = nigroups + g;
+		    is->skew = hs->skew;
+		    ++s;
+		    if (++si < sj) {
+				hs = hsd[si];
+				is = isd[nisig + s];
+		    }
+		}
+		g++;
     }
 
     /* Produce a warning message if none of the requested signals could be opened. */
@@ -897,46 +892,48 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ //nota:esto e
     //   maximum number of samples per signal per frame and the maximum skew. 
     for (si = 0; si < s; si++) {
         is = isd[nisig + si];
-	if (siarray != NULL && copysi(&siarray[si], &is->info) < 0) {
-	    // // wfdb_error("isigopen: insufficient memory\n");
-	    return (-3);
-	}
-	is->samp = is->info.initval;
-	if (ispfmax < is->info.spf) ispfmax = is->info.spf;
-	if (skewmax < is->skew) skewmax = is->skew;
+		if (siarray != NULL && copysi(&siarray[si], &is->info) < 0) {
+		    // // wfdb_error("isigopen: insufficient memory\n");
+		    return (-3);
+		}
+		is->samp = is->info.initval;
+		if (ispfmax < is->info.spf) ispfmax = is->info.spf;
+		if (skewmax < is->skew) skewmax = is->skew;
     }
     setgvmode(gvmode);	// Reset sfreq if appropriate. 
     gvc = ispfmax;	// Initialize getvec's sample-within-frame counter. 
     nisig += s;		// Update the count of open input signals. 
     nigroups += g;	// Update the count of open input signal groups. 
 
-    if (sigmap_init() < 0)
-	return (-1);
+    if (sigmap_init() < 0) return (-1); //llena la estructura smi
 
     // Determine the total number of samples per frame. 
     for (si = framelen = 0; si < nisig; si++)
 	framelen += isd[si]->info.spf;
 
     // Allocate workspace for getvec and isgsettime. 
+    //sustituyo los realloc por malloc de forma provisional
+   // (tvector = (WFDB_Sample *)realloc(tvector, sizeof(WFDB_Sample)*framelen)) == NULL ||
+	// (uvector = (WFDB_Sample *)realloc(uvector, sizeof(WFDB_Sample)*framelen)
     if (framelen > tuvlen &&
-	((tvector = (WFDB_Sample *)realloc(tvector, sizeof(WFDB_Sample)*framelen)) == NULL ||
-	 (uvector = (WFDB_Sample *)realloc(uvector, sizeof(WFDB_Sample)*framelen)) == NULL)) {
+	((tvector = (WFDB_Sample *)malloc(sizeof(WFDB_Sample)*framelen)) == NULL ||
+	 (uvector = (WFDB_Sample *)malloc(sizeof(WFDB_Sample)*framelen)) == NULL)) {
 	// // wfdb_error("isigopen: can't allocate frame buffer\n");
-	if (tvector) (void)free(tvector);
-	return (-3);
+		if (tvector) (void)free(tvector);
+		return (-3);
     }
     tuvlen = framelen;
 
     // If deskewing is required, allocate the deskewing buffer (unless this is
     //   a multi-segment record and dsbuf has been allocated already).
     if (skewmax != 0 && (!in_msrec || dsbuf == NULL)) {
-	dsbi = -1;	// mark buffer contents as invalid 
-	dsblen = framelen * (skewmax + 1);
-	if (dsbuf) free(dsbuf);
-	if ((dsbuf=(WFDB_Sample *)malloc(dsblen*sizeof(WFDB_Sample))) == NULL)
-	    // // wfdb_error("isigopen: can't allocate buffer for deskewing\n");
-	// If the buffer couldn't be allocated, the signals can still be read,
-	//   but won't be deskewed. 
+		dsbi = -1;	// mark buffer contents as invalid 
+		dsblen = framelen * (skewmax + 1);
+		if (dsbuf) free(dsbuf);
+		if ((dsbuf=(WFDB_Sample *)malloc(dsblen*sizeof(WFDB_Sample))) == NULL)
+		     // wfdb_error("isigopen: can't allocate buffer for deskewing\n");
+		// If the buffer couldn't be allocated, the signals can still be read,
+		//   but won't be deskewed. 
     }
     return (s);	
 }

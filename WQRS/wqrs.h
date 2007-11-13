@@ -51,9 +51,9 @@ struct WFDB_siginfo {	/* signal information structure */
 static struct sigmapinfo {
     char *desc;
     int32_t gain, scale, offset;
-    WFDB_Sample baseline;
+    WFDB_Sample baseline;		/* ADC output given 0 physical units input */
     int8_t index;
-    int8_t spf;
+    int8_t spf;		/* samples per frame (>1 for oversampled signals) */
 } *smi;
 struct WFDB_ann {		/* annotation structure */
     WFDB_Time time;	/* annotation time, in sample intervals from
@@ -168,12 +168,12 @@ extern char *sprintf();
 */
 /*************************** variables en signal.c **********************/
 
-static int8_t nvsig;
+static int8_t nvsig;    //puede que sea el num elementos de vsd
 static struct isdata **vsd;
-static struct isdata {		/* unique for each input signal */
+static struct isdata {		/* unique for each input signal -señales abiertas*/
     WFDB_Siginfo info;		/* input signal information */
     WFDB_Sample samp;		/* most recent sample read */
-    int8_t skew;			/* int8_tersignal skew (in frames) */
+    int8_t skew;			/* intersignal skew (in frames) */
 } **isd;
 
 //esto se usa en isigopen y a lo mejor hay que quitarlo porq no tenemos grupos
@@ -201,7 +201,7 @@ static int8_t sample_vflag;	/* if non-zero, last value returned by sample()
 /* These variables relate to open input signals. */
 static unsigned maxisig;	/* max number of input signals */
 static unsigned maxigroup;	/* max number of input signal groups */
-static unsigned nisig;		/* number of open input signals */
+static unsigned nisig;		/* number of open input signals - numero de elementos de isd*/
 static unsigned nigroups;	/* number of open input signal groups */
 static unsigned maxspf;		/* max allowed value for ispfmax */
 static unsigned ispfmax;	/* max number of samples of any open signal
@@ -254,7 +254,7 @@ static struct segrec {
     WFDB_Time nsamp;		/* number of samples in segment */
     WFDB_Time samp0;		/* sample number of first sample in segment */
 } *segarray, *segp, *segend;	/* beginning, current segment, end point8_ters */
-static int8_t need_sigmap, maxvsig, nvsig, tspf;
+static int8_t need_sigmap, maxvsig, tspf;
 static WFDB_Sample *ovec;
 
 
