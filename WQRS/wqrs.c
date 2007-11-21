@@ -173,7 +173,7 @@ main(int8_t argc, char **argv)
 					to a minimum value;  the threshold is
 					restored upon a detection */
     double Ta, T0;			     /* high and low detection thresholds */
-    WFDB_Anninfo a;
+    //WFDB_Anninfo a;
     WFDB_Annotation annot;
     WFDB_Gain gain;
     WFDB_Sample *v;
@@ -277,12 +277,12 @@ main(int8_t argc, char **argv)
     nsig=1;
     
     if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
-	//(void)fprintf(stderr, "%s: insufficient memory\n", pname);
-	//	printf("%s: insufficient memory\n", pname);
-	exit(2);
+		//(void)fprintf(stderr, "%s: insufficient memory\n", pname);
+		//	printf("%s: insufficient memory\n", pname);
+		exit(2);
     }
-    a.name = "wqrs"; a.stat = WFDB_WRITE;
-    if ((nsig = wfdbinit("100"/*record*/, &a, 1, s, nsig)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
+    //a.name = "wqrs"; a.stat = WFDB_WRITE;
+    if ((nsig = wfdbinit("100"/*record*/, /*&a, 1, */s, nsig)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
     
     
     //if (sig < 0 || sig >= nsig) sig = 0;  
