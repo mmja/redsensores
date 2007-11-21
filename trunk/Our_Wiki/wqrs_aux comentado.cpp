@@ -453,3 +453,155 @@ static int8_t readheader(char *record)
    // }
     return (s);			/* return number of available signals */
 }
+
+
+/**************************************************************************************************************************/
+
+
+/* annopen: open annotation files for the specified record 
+llena las estructuras oadata y iadata, que contienen la informacion del fichero de salida
+
+*/
+
+int8_t annopen(char *record, WFDB_Anninfo *aiarray, unsigned int nann) //"100",["wqrs",write],1 (nann: numero de posiciones de aiarray
+{
+    int a;
+    unsigned int i, niafneeded, noafneeded;
+
+    if (*record == '+')		/* don't close open annotation files */
+		record++;		/* discard the '+' prefix */
+    else {
+		//wfdb_anclose();		/* close previously opened annotation files */
+		//tmul = 0.0;
+    }
+
+    /* Prescan aiarray to see how large maxiann and maxoann must be. */
+    niafneeded = niaf;
+    noafneeded = noaf;
+    for (i = 0; i < nann; i++)
+		switch (aiarray[i].stat) {
+		  case WFDB_READ:	/* standard (MIT-format) input file */
+		  case WFDB_AHA_READ:	/* AHA-format input file */
+		    niafneeded++;
+		    break;
+		  case WFDB_WRITE:	/* standard (MIT-format) output file */
+		  case WFDB_AHA_WRITE:	/* AHA-format output file */
+		    noafneeded++;
+		    break;
+		  default:
+		    /*wfdb_error(
+			     "annopen: illegal stat %d for annotator %s, record %s\n",
+			     aiarray[i].stat, aiarray[i].name, record);*/
+		    return (-5);
+		}
+    /* Allocate workspace. */
+    if (allociann(niafneeded) < 0 || allocoann(noafneeded) < 0)
+	return (-3);
+
+    for (i = 0; i < nann; i++) { /* open the annotation files */
+	struct iadata *ia;
+	struct oadata *oa;
+
+	switch (aiarray[i].stat) {
+	  case WFDB_READ:	/* standard (MIT-format) input file */
+	  case WFDB_AHA_READ:	/* AHA-format input file */
+	    ia = iad[niaf];
+	    wfdb_setirec(record);
+	    if ((ia->file=wfdb_open(aiarray[i].name,record,WFDB_READ)) ==NULL) {
+			//wfdb_error("annopen: can't read annotator %s for record %s\n", aiarray[i].name, record);
+			return (-3);
+	    }
+	    if ((ia->info.name = (char *)malloc((unsigned)(strlen(aiarray[i].name)+1)))	 == NULL) {
+			//wfdb_error("annopen: insufficient memory\n");
+			return (-3);
+	    }
+	    (void)strcpy(ia->info.name, aiarray[i].name);
+
+	    /* Try to figure out what format the file is in.  AHA-format files
+	       begin with a null byte and an ASCII character which is one
+	       of the legal AHA annotation codes other than '[' or ']'.
+	       MIT annotation files cannot begin in this way. */
+	    ia->word = (unsigned)wfdb_g16(iad[niaf]->file);
+	    a = (ia->word >> 8) & 0xff;
+	    if ((ia->word & 0xff) ||
+		ammap(a) == NOTQRS || a == '[' || a == ']') {
+		if (aiarray[i].stat != WFDB_READ) {
+		   // wfdb_error("warning (annopen, annotator %s, record %s):\n",
+			//     aiarray[i].name, record);
+		    //wfdb_error(" file appears to be in MIT format\n");
+		    //wfdb_error(" ... continuing under that assumption\n");
+		}
+		(ia->info).stat = WFDB_READ;
+		/* read any initial null annotation(s) */
+		while ((ia->word & CODE) == SKIP) {
+		    ia->tt += wfdb_g32(ia->file);
+		    ia->word = (unsigned)wfdb_g16(ia->file);
+		}
+	    }
+	    else {
+		if (aiarray[i].stat != WFDB_AHA_READ) {
+		   // wfdb_error("warning (annopen, annotator %s, record %s):\n",
+		//	     aiarray[i].name, record);
+		  //  wfdb_error(" file appears to be in AHA format\n");
+		     // wfdb_error(" ... continuing under that assumption\n");
+		}
+		ia->info.stat = WFDB_AHA_READ;
+	    }
+	    ia->ann.anntyp = 0;    /* any pushed-back annot is invalid */
+	    niaf++;
+	    (void)get_ann_table(niaf-1);
+	    break;
+
+	  case WFDB_WRITE:	/* standard (MIT-format) output file */
+	  case WFDB_AHA_WRITE:	/* AHA-format output file */
+	    oa = oad[noaf];
+	    /* Quit (with message from wfdb_checkname) if name is illegal */
+	    if (wfdb_checkname(aiarray[i].name, "annotator"))
+		return (-4);
+	    if ((oa->file=wfdb_open(aiarray[i].name,record,WFDB_WRITE)) ==	NULL) {
+		//wfdb_error("annopen: can't write annotator %s for record %s\n", aiarray[i].name, record);
+		return (-4);
+	    }
+	    if ((oa->info.name =
+		 (char *)malloc((unsigned)(strlen(aiarray[i].name)+1)))
+		== NULL) {
+		wfdb_error("annopen: insufficient memory\n");
+		return (-4);
+	    }
+	    (void)strcpy(oa->info.name, aiarray[i].name);
+	    if ((oa->rname = (char *)malloc((unsigned)(strlen(record)+1)))== NULL) {
+		//wfdb_error("annopen: insufficient memory\n");
+		return (-4);
+	    }
+	    (void)strcpy(oa->rname, record);
+	    oa->ann.time = 0L;
+	    oa->info.stat = aiarray[i].stat;
+	    oa->out_of_order = 0;
+	    (void)put_ann_table(noaf++);
+	    break;
+	}
+    }
+    return (0);
+   
+}
+/************************************************************************************************************************/
+
+//This function determines the sampling frequency (in Hz) for the record specified by its argument.
+WFDB_Frequency sampfreq(char *record){
+	int n;
+
+    if (record != NULL) {
+		/* Save the current record name. */
+		wfdb_setirec(record);
+		/* Don't require the sampling frequency of this record to match that
+		   of the previously opened record, if any.  (readheader will
+		   complain if the previously defined sampling frequency was > 0.) */
+		setsampfreq(0.);
+		/* readheader sets sfreq if successful. */
+		if ((n = readheader(record)) < 0)
+		    /* error message will come from readheader */
+		    return ((WFDB_Frequency)n);
+    }
+    return (sfreq);
+	
+}

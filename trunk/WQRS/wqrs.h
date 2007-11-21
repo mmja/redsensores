@@ -28,8 +28,8 @@ the legal values for the format field in a WFDB_siginfo structure.
   61	16-bit 2's complement amplitudes, high byte first
   80	8-bit offset binary amplitudes
  160	16-bit offset binary amplitudes
- 212	2 12-bit amplitudes bit-packed in 3 bytes
- 310	3 10-bit amplitudes bit-packed in 4 bytes
+ 212	2 12-bit amplitudes bit-packed in 3 bytes [12, 12]
+ 310	3 10-bit amplitudes bit-packed in 4 bytes [10,10,10]
  311    3 10-bit amplitudes bit-packed in 4 bytes
 */
 struct WFDB_siginfo {	/* signal information structure */
