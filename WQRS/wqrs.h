@@ -5,13 +5,16 @@
 #include <stdint.h>
 //Definicion de tipos
 typedef int16_t	     WFDB_Sample;   /* units are adus */
-typedef int16_t 	 WFDB_Time;	    /* units are sample intervals */
+typedef int32_t 	 WFDB_Time;	    /* units are sample intervals */
 typedef double	 WFDB_Gain;	    /* units are adus per physical unit */
 typedef uint8_t WFDB_Group;    /* signal group number */
-typedef uint8_t WFDB_Signal;   /* signal number */
+typedef uint16_t WFDB_Signal;   /* signal number */
 typedef uint8_t WFDB_Annotator;/* annotator number */
 typedef double	     WFDB_Frequency;/* units are Hz (samples/second/signal) */
 typedef int16_t	     WFDB_Date;	    /* units are days */
+
+//#define BUFLN   4096	/* must be a power of 2, see sample() */
+
 
 //Estructuras
 struct WFDB_anninfo {	/* annotator information structure */
@@ -74,6 +77,7 @@ struct WFDB_ann {		/* annotation structure */
 typedef struct WFDB_ann WFDB_Annotation;
 typedef struct WFDB_siginfo WFDB_Siginfo;
 typedef struct WFDB_anninfo WFDB_Anninfo;
+typedef struct sigmapinfo sigmapinfo;
 
 
 //typedef struct netfile netfile;
@@ -93,6 +97,8 @@ typedef struct WFDB_anninfo WFDB_Anninfo;
 #define WFDB_DEFGAIN	200.0  /* default value for gain (adu/physical unit) */
 #define	WFDB_MAXSIG   32   /* maximum number of input or output signals */
 #define WFDB_MAXANN    2   /* maximum number of input or output annotators */
+#define WFDB_MAXDSL   60   /* maximum length of WFDB_siginfo `.desc' string */
+
 
 /* WFDB_anninfo '.stat' values */
 //#define WFDB_READ      0   /* standard input annotation file */
@@ -133,14 +139,21 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig);
 int8_t setifreq(WFDB_Frequency f);
 WFDB_Sample muvadu(WFDB_Signal s, int8_t v);
 int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot);
-int8_t wfdbinit(char *record, WFDB_Anninfo *aiarray, uint8_t nann,
-           WFDB_Siginfo *siarray, uint8_t nsig);
+int8_t wfdbinit(char *record, WFDB_Siginfo *siarray, uint8_t nsig);
 void wfdbquit(void);
-int8_t adumuv(WFDB_Signal s, WFDB_Sample a);
-WFDB_Time strtim(char *string);
+//int8_t adumuv(WFDB_Signal s, WFDB_Sample a);
+//WFDB_Time strtim(char *string);
 WFDB_Frequency sampfreq(char *record);
-int8_t getvec(WFDB_Sample *vector);
+//int8_t getvec(WFDB_Sample *vector);
 static int8_t copysi(WFDB_Siginfo *to, WFDB_Siginfo *from);
+//int8_t isgsettime(WFDB_Group g, WFDB_Time t);
+//int8_t isigsettime(WFDB_Time t);
+static int8_t isgsetframe(WFDB_Group g, WFDB_Time t);
+static int rgetvec(WFDB_Sample *vector);
+
+
+
+
 
 
 /*
@@ -258,12 +271,15 @@ static int8_t need_sigmap, maxvsig, tspf;
 static WFDB_Sample *ovec;
 
 
-static int8_t ibsize;		/* default input buffer size */
+static int16_t ibsize;		/* default input buffer size */
 static struct hsdata {
     WFDB_Siginfo info;		/* info about signal from header */
     int16_t start;			/* signal file byte offset to sample 0 */
     int8_t skew;			/* intersignal skew (in frames) */
 } **hsd;
+
+typedef struct hsdata hsdata;
+
 
 static unsigned maxhsig;	/* # of hsdata structures pointed to by hsd */
 //Esto lo comento xq no usamos files ************************************************
@@ -290,8 +306,8 @@ static WFDB_Time ostime;	/* time of next output sample */
 static int8_t obsize;		/* default output buffer size */
 
 
-//static WFDB_Frequency cfreq;	/* counter frequency (ticks/second) */
-//static double bcount;		/* base count (counter value at sample 0) */
+static WFDB_Frequency cfreq;	/* counter frequency (ticks/second) */
+static double bcount;		/* base count (counter value at sample 0) */
 /* Local functions (not accessible outside this file). */
 
 /****************************contenidos de wfdbf.c***********************/
