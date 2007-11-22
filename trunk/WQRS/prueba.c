@@ -2,16 +2,34 @@
 
 int main()
 {
-   char nombre[20]="", entrada[81]="";
-   unsigned int edad=0;
-	int i;
-   printf( "Escriba su nombre y edad, separados por un espacio:\n" );
-   gets( entrada );
-   i=sscanf( entrada, "%s %u", nombre, &edad );
+   FILE *f1;
+   char buffer[1000];
+   f1=fopen("100.dat","r");
+   if(f1==NULL) {
+	   printf("error\n");
+   		return 0;
+	}
+   int leidos;
+   printf("%d\n",getc(f1));
+   
+   leidos=fread(buffer,1,1000,f1);
+   if(leidos==0||leidos==-1) {
+	   printf("error\n");
+   		return 0;
+	}
 
-   printf( "Has escrito: %s\n", entrada );
-   printf( "Nombre: %s. Edad: %d\n", nombre, edad );
-   printf("%d",i);
+	//printf("buffer: %s\n",buffer);
+	while(!feof(f1)){
+		//printf("leidos: %d\n",leidos);
+		//leidos=fread(buffer,1,1000,f1);	
+		//printf("buffer: %s\n",buffer);
+		printf("%d\n",getc(f1));
+		
+		
+	}
+	fclose(f1);
+   
+   
 
    return 0;
 }

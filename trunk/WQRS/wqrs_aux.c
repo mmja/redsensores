@@ -10,15 +10,13 @@
 
 WFDB_Sample *sbuf;	/* buffer used by sample() */
 #define BUFLN   4096	/* must be a power of 2, see sample() */
+static char irec[WFDB_MAXRNL+1]; // current record name, set by wfdb_setirec 
 
 
 
-/*****************************************************************************************
-**************Definiciones en sustitucion de #include <wfdb/wfdb.h>***********************
-*******************************************************************************************/
 
 
-
+//......................................... Make_vsd ............................................
 //hace el objeto vsd (de señal virtual)
 static int8_t make_vsd(void){
     int8_t i;
@@ -56,6 +54,8 @@ static int8_t make_vsd(void){
 
     return (nvsig);
 }
+//......................................... sigmap_init ............................................
+
 //maneja los mapas de señales ->llena la estructura smi
 static int8_t sigmap_init(void)
 {
@@ -136,6 +136,8 @@ static int8_t sigmap_init(void)
     return (0);
 }
 
+//......................................... allocisig ............................................
+
 //pone el numero maximo de señales abiertas a la vez
 static int8_t allocisig(int8_t n)
 {
@@ -164,6 +166,9 @@ static int8_t allocisig(int8_t n)
     }
     return (maxisig);
 }
+
+//......................................... allocigroup ............................................
+
 //(sets max number of simultaneously open input signal groups)
 static int8_t allocigroup(int8_t n)
 {
@@ -191,6 +196,8 @@ static int8_t allocigroup(int8_t n)
     }
     return (maxigroup);
 }
+
+//......................................... copysi ............................................
 
 //copia estructuras WFDB_siginfo
 static int8_t copysi(WFDB_Siginfo *to, WFDB_Siginfo *from)
@@ -225,6 +232,8 @@ static int8_t copysi(WFDB_Siginfo *to, WFDB_Siginfo *from)
     return (1);
 }
 
+//......................................... hsdfree ............................................
+
 //libera memoria usada por readheader (estructura hsdata)
 static void hsdfree(void)
 {
@@ -243,6 +252,9 @@ static void hsdfree(void)
     }
     maxhsig = 0;
 }
+
+//......................................... isigclose ............................................
+
 //libera las señales abiertas (estructura isdata)
 static void isigclose(void)  
 {
@@ -293,6 +305,10 @@ static void isigclose(void)
     if (nosig == 0 && maxhsig != 0)
 	hsdfree();
 }
+
+
+//......................................... getvec ............................................
+
 //reads a (possibly resampled) sample from each input signal
 int8_t getvec(WFDB_Sample *vector)
 {
@@ -319,6 +335,8 @@ int8_t getvec(WFDB_Sample *vector)
     gvtime += mticks;
     return (rgvstat);
 }
+
+//......................................... isgsettime ............................................
 
 //skips to a specified time in a specified signal group
 int8_t isgsettime(WFDB_Group g, WFDB_Time t)
@@ -367,6 +385,9 @@ int8_t isgsettime(WFDB_Group g, WFDB_Time t)
     return (stat);
 }
 
+//......................................... isigsettime ............................................
+
+
 //skips to a specified time in each signal
 int8_t isigsettime(WFDB_Time t)
 {
@@ -386,7 +407,7 @@ int8_t isigsettime(WFDB_Time t)
 }
 
 
-
+//********************************************* SAMPLE  ***************************************
 //consultar funciones http://physionet.org/physiotools/wpg/wpg_toc.htm
 //This function return the value (in raw adus) of sample number t in open signal s,
 //if successful, or the value of the previous successfully read sample.
@@ -455,7 +476,7 @@ int8_t sample_valid(void){
 }
 
 
-//-----------------------------------------------setgvmode--------------------------------------------------
+//----------------------------------------------- setgvmode --------------------------------------------------
 //ver http://physionet.org/physiotools/wpg/wpg_20.htm#SEC66
 void setgvmode(int8_t mode){
 	  
@@ -486,128 +507,12 @@ void setgvmode(int8_t mode){
 }
 
 
-//-----------------------------------------------isigopen--------------------------------------------------
 
 
-static char irec[WFDB_MAXRNL+1]; // current record name, set by wfdb_setirec 
 
-//esta funcion se puede comentar (creo) xq solo abria el FILE
-/*WFDB_FILE *wfdb_open(char *s, char *record, int mode)
-{
-    char *wfdb, *p;
-    struct wfdb_path_component *c0;
-    WFDB_FILE *ifile;
 
-    // Check to see if standard input or output is requested. 
-    if (strcmp(s, "-") == 0 ||
-	(strcmp(s, "hea") == 0 && strcmp(record, "-") == 0))
-	if (mode == WFDB_READ) {
-	    static WFDB_FILE wfdb_stdin;
 
-	    wfdb_stdin.type = WFDB_LOCAL;
-	    wfdb_stdin.fp = stdin;
-	    return (&wfdb_stdin);
-	}
-    else {
-	    static WFDB_FILE wfdb_stdout;
-
-	    wfdb_stdout.type = WFDB_LOCAL;
-	    wfdb_stdout.fp = stdout;
-	    return (&wfdb_stdout);
-	}
-
-    // If the record name is empty, use the type as the record name and empty
-    //   the type string. 
-    if (record == NULL || *record == '\0') {
-	if (s == NULL || *s == '\0')
-	    return (NULL);	// failure -- both components are empty 
-	record = s; s = NULL;
-    }
-
-    // If the file is to be opened for output, use the current directory.
-    //   An output file can be opened in another directory if the path to
-    //   that directory is the first part of 'record'. 
-    if (mode == WFDB_WRITE) {
-	spr1(wfdb_filename, record, s);
-	return (wfdb_fopen(wfdb_filename, WB));
-    }
-
-    // If the file is to be opened for input, prepare to search the database
-    //   directories. 
-
-    if (wfdb_path_list == NULL) (void)getwfdb();
-
-    for (c0 = wfdb_path_list; c0; c0 = c0->next) {
-	char long_filename[MFNLEN];
-
-        p = wfdb_filename;
-	wfdb = c0->prefix;
-	while (*wfdb && p < wfdb_filename+MFNLEN-20) {
-	  if (*wfdb == '%') {
-		// Perform substitutions in the WFDB path where `%' is found 
-		wfdb++;
-		if (*wfdb == 'r') {
-		    // `%r' -> record name 
-		    (void)strcpy(p, irec);
-		    p += strlen(p);
-		    wfdb++;
-		}
-		else if ('1' <= *wfdb && *wfdb <= '9' && *(wfdb+1) == 'r') {
-		    // `%Nr' -> first N characters of record name 
-		    int n = *wfdb - '0';
-		    int len = strlen(irec);
-
-		    if (len < n) n = len;
-		    (void)strncpy(p, irec, n);
-		    p += n;
-		    *p = '\0';
-		    wfdb += 2;
-		}
-		else    //`%X' -> X, if X is neither `r', nor a non-zero digit
-			   //followed by 'r' 
-		    *p++ = *wfdb++;
-	    }
-	    else *p++ = *wfdb++;
-	}
-	// Unless the WFDB component was empty, or it ended with a directory
-	//   separator, append a directory separator to wfdb_filename;  then
-	//   append the record and type components.  Note that names of remote
-	//   files (URLs) are always constructed using '/' separators, even if
-	//   the native directory separator is '\' (MS-DOS) or ':' (Macintosh).
-	
-	if (p != wfdb_filename) {
-	    if (c0->type == WFDB_NET) {
-		if (*(p-1) != '/') *p++ = '/';
-	    }
-#ifndef MSDOS
-	    else if (*(p-1) != DSEP)
-#else
-	    else if (*(p-1) != DSEP && *(p-1) != ':')
-#endif
-		*p++ = DSEP;
-	}
-	if (p + strlen(record) + (s ? strlen(s) : 0) > wfdb_filename + MFNLEN-5)
-	    continue;	// name too long -- skip
-	spr1(p, record, s);
-	if ((ifile = wfdb_fopen(wfdb_filename, RB)) != NULL) {
-	    // Found it! Add its path info to the WFDB path. 
-	    wfdb_addtopath(wfdb_filename);
-	    return (ifile);
-	}
-	// Not found -- try again, using an alternate form of the name,
-	//   provided that that form is distinct. 
-	strcpy(long_filename, wfdb_filename);
-	spr2(p, record, s);
-	if (strcmp(wfdb_filename, long_filename) && 
-	    (ifile = wfdb_fopen(wfdb_filename, RB)) != NULL) {
-	    wfdb_addtopath(wfdb_filename);
-	    return (ifile);
-	}
-    }
-    // If the file was not found in any of the directories listed in wfdb,
-   //   return a null file pointer to indicate failure. 
-    return (NULL);
-}*/
+//............................. wfdb_setirec .......................................
 /* wfdb_setirec saves the current record name (its argument) in irec (defined
 above) to be substituted for `%r' in the WFDB path by wfdb_open as necessary.
 wfdb_setirec is invoked by isigopen (except when isigopen is invoked
@@ -644,6 +549,8 @@ static int8_t isfmt(int8_t f)
 	    default:return (0);
 	    }
 }
+
+//----------------------------------------------- readheader --------------------------------------------------
 
 static int8_t readheader(char *record)
 {
@@ -810,6 +717,7 @@ static int8_t readheader(char *record)
     return (s);			/* return number of available signals */
 }
 
+//-----------------------------------------------isigopen--------------------------------------------------
 
 //Return:
 //>0 Success: the returned value is the number of input signals (i.e., the number of valid entries in siarray) 
@@ -1008,7 +916,6 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){
     return (s);	
 }
 
-//-----------------------------------------------setifreq--------------------------------------------------
 //---------------------------------------------las r----------------------------------------------------
 static int8_t _l;		    /* macro temporary storage for low byte of word */
 static int8_t _n;		    /* macro temporary storage for byte count */
@@ -1123,6 +1030,8 @@ static int8_t r311(struct igdata *g)
 
 
 //---------------------------------------------------fin de las r--------------------------------------------------
+
+//----------------------------------------------- isgsetframe -------------------------------------------------
 
 //skips to a specified frame number in a specified signal group
 //creemos que lee del fichero 100.dat el frame que corresponde al tiempo t y lo mete en igd[g]->buf
@@ -1317,6 +1226,9 @@ static int8_t isgsetframe(WFDB_Group g, WFDB_Time t)
     return (0);
 }
 
+//----------------------------------------------- getskewedframe -------------------------------------------------
+
+
 //reads an input frame, without skew correction
 //llena el vector con algo de los ig q no sabemos bien que
 static int8_t getskewedframe(WFDB_Sample *vector)
@@ -1425,6 +1337,11 @@ static int8_t getskewedframe(WFDB_Sample *vector)
     }
     return (stat);
 }
+
+
+
+//----------------------------------------------- sigmap -------------------------------------------------
+
 //creates a virtual signal vector from a raw sample vector
 static void sigmap(WFDB_Sample *vector)
 {
@@ -1446,6 +1363,9 @@ static void sigmap(WFDB_Sample *vector)
       }
     }
 }
+
+//----------------------------------------------- getframe -------------------------------------------------
+
 
 //reads an input frame
 //llamando a getsekewframe llena las estructura ig y vector
@@ -1480,6 +1400,10 @@ int8_t getframe(WFDB_Sample *vector)
     istime++;
     return (stat);
 }
+
+
+//----------------------------------------------- rgetvec -------------------------------------------------
+
 //reads a sample from each input signal without resampling
 //mete en vector
 static int rgetvec(WFDB_Sample *vector)
@@ -1520,6 +1444,7 @@ static int rgetvec(WFDB_Sample *vector)
     return (stat);
 }
 
+//----------------------------------------------- setifreq -------------------------------------------------
 
 //sets the current input sampling frequency
 int8_t setifreq(WFDB_Frequency f){
@@ -1573,6 +1498,7 @@ int8_t setifreq(WFDB_Frequency f){
     }
 	
 }
+
 //-------------------------------------------muvadu----------------------------------------------------
 //his function converts the potential difference v from microvolts to ADC units, 
 //based on the gain for input signal s.
@@ -1592,166 +1518,8 @@ WFDB_Sample muvadu(WFDB_Signal s, int8_t v){
 
 }
 
-//-----------------------------------------------putann--------------------------------------------------
-// putann	-->	writes an annotation
-//  0   Success 
-//-1    Failure: write error 
-//-2    Failure: incorrect annotator number specified 
-//This function writes the next annotation for the output 
-//annotator specified by an from the annotation structure pointed to by annot.
-static unsigned noaf;		/* number of open output annotators */
-//typedef int8_t WFDB_FILE;
-//static struct oadata {
-//   WFDB_FILE *file;		/* file pointer for output annotation file */
-//    WFDB_Anninfo info;		/* output annotator information */
-//    WFDB_Annotation ann;	/* most recent annotation written by putann */
-//    int8_t seqno;			/* annotation serial number (AHA format only)*/
-//    char *rname;		/* record with which annotator is associated */
-//    char out_of_order;		/* if >0, one or more annotations written by
-//				   putann are not in the canonical (time, chan)
-//				   order */
-//} **oad;
+//----------------------------------------------- wfdbinit -------------------------------------------------
 
-double tmul;		/* `time' fields in annotations are
-				   tmul * times in annotation files */
- 
-/* Annotation word format */
-#define CODE	0176000	/* annotation code segment of annotation word */
-#define CS	10	/* number of places by which code must be shifted */
-#define DATA	01777	/* data segment of annotation word */
-#define MAXRR	01777	/* longest interval which can be coded in a word */
-
-/* Pseudo-annotation codes.  Legal pseudo-annotation codes are between PAMIN
-   (defined below) and CODE (defined above).  PAMIN must be greater than
-   ACMAX << CS (see <ecg/ecgcodes.h>). */
-#define PAMIN	((unsigned)(59 << CS))
-#define SKIP	((unsigned)(59 << CS))	/* long null annotation */
-				   
-/* putann: write annotation at annot to annotator n */
-//Se rellena la estructura "oa" del tipo oadata usando annot
-int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot)//sabemos n=0
-{
-    unsigned annwd;
-    char *ap;
-    int i, len;
-    long delta;
-    WFDB_Time t;
-    struct oadata *oa;
-	//Intenta abrir el fichero:
-    if (n >= noaf || (oa = oad[n]) == NULL || oa->file == NULL) {
-	//wfdb_error("putann: can't write annotation file %d\n", n);
-		return (-2);
-    }
-	//Determina el instante t
-    if (annot->time == 0L)
-		t = 0L;
-    else {
-		if (tmul <= 0.0) {
-		    WFDB_Frequency f = sampfreq(NULL);
-	
-		    tmul = getspf();
-		    if (f != (WFDB_Frequency)0)
-			tmul = tmul * getifreq() / f;
-		}
-		t = (WFDB_Time)(annot->time / tmul + 0.5);
-    }
-    //Si "one or more annotations written by putann are not in the canonical (time, chan) order" :
-    if (((delta = t - oa->ann.time) < 0L ||(delta == 0L && annot->chan <= oa->ann.chan)) &&(t != 0L || oa->ann.time != 0L)) {
-		oa->out_of_order = 1;
-    }
-    //Dependiendo del tipo de fichero de salida que sea el que contiene oa:
-    switch (oa->info.stat) {
-      case WFDB_WRITE:	/* MIT-format output file */
-      default:
-      		//Creo que esto es un caso de error:
-			if (annot->anntyp == 0) {
-			    /* The caller intends to write a null annotation here, but putann
-			       must not write a word of zeroes that would be interpreted as
-			       an EOF.  To avoid this, putann writes a SKIP to the location
-			       just before the desired one;  thus annwd (below) is never 0. */
-			    wfdb_p16(SKIP, oa->file); wfdb_p32(delta-1, oa->file); delta = 1;
-			}
-			else if (delta > MAXRR || delta < 0L) {
-			    wfdb_p16(SKIP, oa->file); wfdb_p32(delta, oa->file); delta = 0;
-			}	
-			
-			// OJO!!!!! MAXRR, SKIP, DATA, SUB, CS ... son todo contstantes definidas justo antes de esta funcion 
-			// Y las funciones estan en wfdbio.c :
-			// wfdb_p16		(writes a 16-bit integer)
- 			// wfdb_p32		(writes a 32-bit integer)
-			// wfdb_mamap [10.4]	(function version of mamap, see ecgmap.h)en annot.c
-			
-			annwd = (int)delta + ((int)(annot->anntyp) << CS);
-			wfdb_p16(annwd, oa->file);
-			if (annot->subtyp != 0) {
-			    annwd = SUB + (DATA & annot->subtyp);
-			    wfdb_p16(annwd, oa->file);
-			}
-			if (annot->chan != oa->ann.chan) {
-			    annwd = CHN + (DATA & annot->chan);
-			    wfdb_p16(annwd, oa->file);
-			}
-			if (annot->num != oa->ann.num) {
-			    annwd = NUM + (DATA & annot->num);
-			    wfdb_p16(annwd, oa->file);
-			}
-			if (annot->aux != NULL && *annot->aux != 0) {
-			    annwd = AUX+(unsigned)(*annot->aux); 
-			    wfdb_p16(annwd, oa->file);
-			    (void)wfdb_fwrite(annot->aux + 1, 1, *annot->aux, oa->file);
-			    if (*annot->aux & 1)
-				(void)wfdb_putc('\0', oa->file);
-			}
-			break;
-      case WFDB_AHA_WRITE:	/* AHA-format output file */
-			(void)wfdb_putc('\0', oa->file);
-			(void)wfdb_putc(mamap(annot->anntyp, annot->subtyp), oa->file);
-			wfdb_p32(t, oa->file);
-			wfdb_p16((unsigned int)(++(oa->seqno)), oa->file);
-			(void)wfdb_putc(annot->subtyp, oa->file);
-			(void)wfdb_putc(annot->anntyp, oa->file);
-			if (ap = annot->aux)
-			    len = (*ap < AUXLEN) ? *ap : AUXLEN;
-			else
-			    len = 0;
-			for (i = 0, ap++; i < len; i++, ap++)
-			    (void)wfdb_putc(*ap, oa->file);
-			for ( ; i < AUXLEN; i++)
-			    (void)wfdb_putc('\0', oa->file);
-			break;
-    }
-    
-    //Si el fichero de output da error
-    if (wfdb_ferror(oa->file)) {
-	//wfdb_error("putann: write error on annotation file %s\n",oa->info.name);
-	return (-1);
-    }
-    oa->ann = *annot;
-    oa->ann.time = t;
-    return (0);
-}
-///.......................Funciones de wfdbio.c para putann.......................................
-int wfdb_putc(int c, WFDB_FILE *wp)
-{
-    if (wp->type == WFDB_NET)
-	return (nf_putc(c, wp->netfp));
-    return (putc(c, wp->fp));
-}
-
-/* write a 16-bit integer in PDP-11 format */
-void wfdb_p16(unsigned int x, WFDB_FILE *fp)
-{
-    (void)wfdb_putc((char)x, fp);
-    (void)wfdb_putc((char)(x >> 8), fp);
-}
-
-/* write a 32-bit integer in PDP-11 format */
-void wfdb_p32(long x, WFDB_FILE *fp)
-{
-    wfdb_p16((unsigned int)(x >> 16), fp);
-    wfdb_p16((unsigned int)x, fp);
-}
-//............................................................................................
 //http://physionet.org/physiotools/wpg/wpg_19.htm#SEC62
 //char *record, /*WFDB_Anninfo *aiarray, uint8_t nann,*/ WFDB_Siginfo *siarray, uint8_t nsig
 int8_t wfdbinit(char *record, WFDB_Siginfo *siarray, uint8_t nsig){
@@ -1782,11 +1550,9 @@ int8_t wfdbinit(char *record, WFDB_Siginfo *siarray, uint8_t nsig){
     return (1);*/
 	           	           
 }	
-//This function closes all open WFDB files and frees any memory allocated by other WFDB library functions
-//Esta funcion cierra los ficheros abiertos para leer, pero creo q ya no habrimos ficheros para leerlos
-/*void wfdbquit(void){
-	
-}*/
+
+//----------------------------------------------- adumuv -------------------------------------------------
+
 //This function converts the potential difference a from ADC units to microvolts,
 // based on the gain for input signal s.
 int8_t adumuv(WFDB_Signal s, WFDB_Sample a){
@@ -1849,71 +1615,7 @@ WFDB_Time strtim(char *string){
 	
 }
 
-/********************************************************************************************************/
 
-/*#if defined(__STDC__) || defined(_WINDOWS)
-# include <stdlib.h>
-#else
-extern double atof();
-extern long atol();
-extern char *getenv();
-extern void exit();
-typedef long time_t;
-# ifdef HAVE_MALLOC_H
-# include <malloc.h>
-# else
-extern char *malloc(), *calloc(), *realloc();
-# endif
-# ifdef ISPRINTF
-extern int sprintf();
-# else
-#  ifndef MSDOS
-extern char *sprintf();
-#  endif
-# endif
-#endif*/
-
-
-/****************************contenidos de wfdbf.c***********************/
-/*#ifndef BSD
-# include <string.h>
-#else		// for Berkeley UNIX only 
-# include <strings.h>
-#endif
-
-#ifdef FIXSTRINGS
-// This function leaks memory!  Ideally we would like to free(t) once *t is
-//   no longer needed.  If this is a concern, we might push all values assigned
-//   to t onto a stack and free them all on exit.  In practice we are usually
-//   dealing with a small number of short strings. 
-char *fcstring(char *s)	// change final space to null 
-{
-    char *p = s, *t;
-
-    while (*s && *s != ' ')
-	s++;
-    //t = calloc(1, s-p+1);
-    t = malloc(s-p+1);
-    if (s > p) strncpy(t, p, s-p);
-    return (t);
-}
-
-char *cfstring(char *s)	// change final null to space 
-{
-    char *p = s;
-
-    while (*s)
-	s++;
-    *s = ' ';
-    return (p);
-}
-#else
-#define fcstring(s)	(s)
-#define cfstring(s)	(s)
-#endif*/
-
-//static WFDB_Siginfo sinfo[WFDB_MAXSIG];
-//static WFDB_Anninfo ainfo[WFDB_MAXANN*2];
 
 
 

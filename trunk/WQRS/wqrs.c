@@ -72,11 +72,7 @@ and then compare its output with the reference annotations by:
 //#include <stdlib.h>
 //#include <math.h>
 #include "wqrs.h"
-//#include <io.h>
 
-//#include <wfdb/wfdb.h>
-//#include <wfdb/ecgcodes.h>
-//#include <wfdb/ecgmap.h>  //librerias quitadas con exito
 
 
 
@@ -87,7 +83,7 @@ and then compare its output with the reference annotations by:
 
 #define BUFLN  16384	/* must be a power of 2, see ltsamp() */
 #define EYE_CLS 0.25    /* eye-closing period is set to 0.25 sec (250 ms) */ 
-#define LPERIOD 1000	/* learning period is the first LPERIOD samples */
+//#define LPERIOD 1000	/* learning period is the first LPERIOD samples */
 #define MaxQRSw 0.13    /* maximum QRS width (130ms) */                        
 #define NDP	 2.5    /* adjust threshold if no QRS found in NDP seconds */
 #define PWFreqDEF 60    /* power line (mains) frequency, in Hz (default) */
@@ -130,12 +126,12 @@ WFDB_Sample ltsamp(WFDB_Time t)
 		    Yn = Yn1 = Yn2 = 0;
 		}
 		else {
-		    //(void)fprintf(stderr, "%s: insufficient memory\n", pname);
+		   
 		    exit(2);
 		}
     }
     if (t < tt - BUFLN) {
-      //  fprintf(stderr, "%s: ltsamp buffer too short\n", pname);
+      
 		exit(2);
     }
     while (t > tt) {
@@ -159,11 +155,10 @@ WFDB_Sample ltsamp(WFDB_Time t)
 
 main(int8_t argc, char **argv)
 { 
-    //char *p;				// toma valor de getenv(...)-> siempre vale 0
-   // char *record = NULL;	     /* input record name */
+    
     float sps;			     /* sampling frequency, in Hz (SR) */
-    float samplingInterval;          /* sampling interval, in milliseconds */
-    int8_t i, max, min, minutes = 0, onset, timer;
+    //float samplingInterval;          /* sampling interval, in milliseconds */
+    int8_t i, max, min, onset, timer;
     
     int8_t Rflag = 0;		     /* if non-zero, resample at 120 or 150 Hz  */
     
@@ -173,23 +168,15 @@ main(int8_t argc, char **argv)
 					to a minimum value;  the threshold is
 					restored upon a detection */
     double Ta, T0;			     /* high and low detection thresholds */
-    //WFDB_Anninfo a;
-    WFDB_Annotation annot;
+   
     WFDB_Gain gain;
-    WFDB_Sample *v;
+    //WFDB_Sample *v;
     WFDB_Siginfo *s;
-    WFDB_Time  next_minute, now, spm, t, tj, tpq, tt, t1,from = 0L, to = 0L;
+    WFDB_Time  t, tpq, tt, t1,from = 0L, to = 0L;
     static int8_t gvmode = 0; //esta se usa para la opcion H pero me creo q tb se usa en otras cosas
     char *prog_name();
     
-    /*//variables comentadas porque quitamos las opciones relacionadas:
-    
-    	int8_t dflag = 0;		     // if non-zero, dump raw and filtered samples only;  do not run detector 
-    	int8_t jflag = 0;		     // if non-zero, annotate J-points 
-    	int8_t vflag = 0;
-    	
-    	    
-    */
+   
    
 
     pname = prog_name(argv[0]);
@@ -197,30 +184,7 @@ main(int8_t argc, char **argv)
     for (i = 1; i < argc; i++) {
 	if (*argv[i] == '-') 
 	switch (*(argv[i]+1)) {
-	  /*case 'd':	// dump filter data 
-	    dflag = 1;
-	    break;*/
-	 /* case 'f':	// starting time 
-	    if (++i >= argc) {
-		//(void)fprintf(stderr, "%s: time must follow -f\n", pname);
-		exit(1);
-	    }
-	    from = i;
-	    break;*/
 	
-	/*  case 'H':	// operate in WFDB_HIGHRES mode 
-	    gvmode = WFDB_HIGHRES;
-	    break;*/
-	 /* case 'j':	// annotate J-points (ends of QRS complexes) 
-	    jflag = 1;
-	    break;*/
-	  /*case 'm':	// threshold 
-	    if (++i >= argc || (Tm = atoi(argv[i])) <= 0) {
-		//(void)fprintf(stderr, "%s: threshold ( > 0) must follow -m\n",
-		//	      pname);
-		exit(1);
-	    }
-	    break;*/
 	  case 'p':	/* specify power line (mains) frequency */
 	    if (++i >= argc || (PWFreq = atoi(argv[i])) <= 0) {
 		//(void)fprintf(stderr,"%s: power line frequency ( > 0) must follow -p\n", pname);
@@ -229,63 +193,42 @@ main(int8_t argc, char **argv)
 	    break;
 	  case 'r':	// record name 
 	    if (++i >= argc) {
-		//(void)fprintf(stderr, "%s: input record name must follow -r\n",  pname);
+		
 		exit(1);
 	    }
-	    //record = argv[i];
+	   
 	    break;
 	  case 'R':	// resample 
 	    Rflag = 1;
 	    break;
-	 /* case 's':	// signal 
-	    if (++i >= argc) {
-		//(void)fprintf(stderr, "%s: signal number must follow -s\n", pname);
-		exit(1);
-	    }
-	    sig = atoi(argv[i]);
-	    break;*/
-	 /* case 't':	// end time 
-	    if (++i >= argc) {
-		//(void)fprintf(stderr, "%s: time must follow -t\n", pname);
-		exit(1);
-	    }
-	    to = i;
-	    break;*/
-	/*  case 'v':	// verbose mode 
-	    vflag = 1;
-	    break;*/
+	
 	  default:
-	    //(void)fprintf(stderr, "%s: unrecognized option %s\n", pname,  argv[i]);
+	   
 	    exit(1);
 	}
 	else {
-	    //(void)fprintf(stderr, "%s: unrecognized argument %s\n", pname, argv[i]);
+	  
 	    exit(1);
 	}
     }
-    /*if (record == NULL) {
-		
-		exit(1);
-    }*/
+    
 
 
-   // if (gvmode == 0 && (p = getenv("WFDBGVMODE")))
-	//gvmode = atoi(p);  -->gvmode=0 siempre
+   
     setgvmode(gvmode|WFDB_GVPAD);
 	//nota: isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig)
     //if ((nsig = isigopen("100"/*record*/, NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
     nsig=1;
     
     if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
-		//(void)fprintf(stderr, "%s: insufficient memory\n", pname);
-		//	printf("%s: insufficient memory\n", pname);
+		
 		exit(2);
     }
     //a.name = "wqrs"; a.stat = WFDB_WRITE;
     if ((nsig = wfdbinit("100"/*record*/, /*&a, 1, */s, nsig)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
     
     
-    //if (sig < 0 || sig >= nsig) sig = 0;  
+    
     sig=0;//analizamos una sola señal
     if ((gain = s[sig].gain) == 0.0) gain = WFDB_DEFGAIN;
     sps = sfreq; //sampfreq((char *)NULL); no hace falta usar este metodo, ya he comprobado que es 0
@@ -294,23 +237,14 @@ main(int8_t argc, char **argv)
     	else setifreq(sps = 150.); //solo deberia quedarse esta opcion
     }
    
-     /*if (from > 0L) {  //opcion -f quitada
-		if ((from = strtim(argv[from])) < 0L)
-			from = -from;
-   	}
-    if (to > 0L) {  //opcion -t quitada
-		if ((to = strtim(argv[to])) < 0L)
-	   		 to = -to;
-    } else */ to = strtim("e");//siempre hace else ya que to=0L
+     to = strtim("e");//siempre hace else ya que to=0L
 
-    annot.subtyp = annot.num = 0;
-    annot.chan = sig;
-    annot.aux = NULL;
+   
     Tm = muvadu(sig, Tm);
-    samplingInterval = 1000.0/sps;
+    //samplingInterval = 1000.0/sps;
     lfsc = 1.25*gain*gain/sps;	/* length function scale constant */
-    spm = 60 * sps;
-    next_minute = from + spm;
+   
+    
     LPn = sps/PWFreq;   /* The LP filter will have a notch at the
 				    power line (mains) frequency */
     if (LPn > 8)  LPn = 8;	/* avoid filtering too agressively */
@@ -322,12 +256,7 @@ main(int8_t argc, char **argv)
     (void)sample(sig, 0L);
     
     
-    /*if (dflag) {   //opbion -d eliminada!!!!!!!!!!
-	for (t = from; t < to || (to == 0L && sample_valid()); t++)
-	//    printf("%6d\t%6d\n", sample(sig, t), ltsamp(t));
-	exit(0);
-    }*/
-
+    
     
     /* Average the first 8 seconds of the length-transformed samples
        to determine the initial thresholds Ta and T0. The number of samples
@@ -381,31 +310,15 @@ main(int8_t argc, char **argv)
 				    (void)sample(sig, tpq);
 				    if (sample_valid() == 0) break;
 				    /* Record an annotation at the QRS onset */
-				    annot.time = tpq;   //aqui hemos encontrado un qrs cuyo inicio es tpq!!!!!!!!!
-				    annot.anntyp = NORMAL;
-				    if (putann(0, &annot) < 0) { /* write the annotation */
-						//wfdbquit();	// close files if an error occurred 
-						exit(1);
-				    }
-				    /*if (jflag) {    //opcion -j elminiada
-					// Find the end of the QRS 
-					for (tt = t, tj = t + 5; tt < t + EyeClosing/2; tt++) {
-					    if (ltsamp(tt) > max - (max/10)) {
-						tj = tt;
-						break;
-					    }
-					}
-					(void)sample(sig, tj);
-					if (sample_valid() == 0) break;
-					// Record an annotation at the J-point 
-					annot.time = tj;
-					annot.anntyp = JPT;
-					if (putann(0, &annot) < 0) {
-					    wfdbquit();
-					    exit(1);
-					}
-				    }*/
-				}
+				   
+				    
+				    
+				    /********************************************************
+				    	aqui es donde tenemos que imprimir el tpq (annot.time)!!!
+				    ********************************************************/
+				 
+				    
+				 }
 	
 				/* Adjust thresholds */
 				Ta += (max - Ta)/10;
@@ -425,27 +338,12 @@ main(int8_t argc, char **argv)
 		    }      
 		}
 	
-		/* Keep track of progress by printing a dot for each minute analyzed */
-		//esto es una chorrada
-		if (t >= next_minute) {
-		    next_minute += spm;
-		    //(void)fprintf(stderr, ".");
-		    //(void)fflush(stderr);
-		    if (++minutes >= 60) {
-			//(void)fprintf(stderr, "\n");
-				minutes = 0;
-		    }
-		}
+		
     }
 
     (void)free(lbuf);
     (void)free(ebuf);
-    //wfdbquit();		        // close WFDB files 
-    //fprintf(stderr, "\n");
-    /*if (vflag) { //opcion -v eliminada
-	//printf("\n\nDone! \n\nResulting annotation file:  %s.wqrs\n\n\n",
-	 //      record);
-    }*/
+    
     exit(0);
 }
 

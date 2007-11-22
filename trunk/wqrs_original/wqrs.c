@@ -388,10 +388,14 @@ main(int argc, char **argv)
 		    /* Record an annotation at the QRS onset */
 		    annot.time = tpq;
 		    annot.anntyp = NORMAL;
+		    
+		    //printf("tiempo antes  :%d\n",tpq);
 		    if (putann(0, &annot) < 0) { /* write the annotation */
 			wfdbquit();	/* close files if an error occurred */
 			exit(1);
 		    }
+		   // printf("tiempo despues:%d\n",annot.time);
+		    
 		    if (jflag) {
 			/* Find the end of the QRS */
 			for (tt = t, tj = t + 5; tt < t + EyeClosing/2; tt++) {
@@ -411,7 +415,7 @@ main(int argc, char **argv)
 			}
 		    }
 		}
-
+		
 		/* Adjust thresholds */
 		Ta += (max - Ta)/10;
 		T1 = Ta / 3;

@@ -14,6 +14,10 @@
 # CC is the name of your ANSI/ISO C compiler (might be 'cc' on some platforms).
   #CC = gcc
   CC = msp430-gcc
+  
+prueba:
+	gcc -o prueba prueba.c -lm 
+	
 
 gcc:
 	gcc -o wqrs wqrs.c wqrs_aux.c -lm #-I /usr/include/wfdb -L /lib -lwfdb -lm
