@@ -551,7 +551,7 @@ static int8_t isfmt(int8_t f)
 }
 
 //----------------------------------------------- readheader --------------------------------------------------
-
+//reads a header file ->lo metemos a capon
 static int8_t readheader(char *record)
 {
     	
