@@ -1593,7 +1593,7 @@ WFDB_Sample muvadu(WFDB_Signal s, int8_t v){
 }
 
 //-----------------------------------------------putann--------------------------------------------------
-
+// putann	-->	writes an annotation
 //  0   Success 
 //-1    Failure: write error 
 //-2    Failure: incorrect annotator number specified 
@@ -1614,20 +1614,36 @@ static unsigned noaf;		/* number of open output annotators */
 
 double tmul;		/* `time' fields in annotations are
 				   tmul * times in annotation files */
-int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){ //sabemos n=0
+ 
+/* Annotation word format */
+#define CODE	0176000	/* annotation code segment of annotation word */
+#define CS	10	/* number of places by which code must be shifted */
+#define DATA	01777	/* data segment of annotation word */
+#define MAXRR	01777	/* longest interval which can be coded in a word */
 
-	/*unsigned annwd;
+/* Pseudo-annotation codes.  Legal pseudo-annotation codes are between PAMIN
+   (defined below) and CODE (defined above).  PAMIN must be greater than
+   ACMAX << CS (see <ecg/ecgcodes.h>). */
+#define PAMIN	((unsigned)(59 << CS))
+#define SKIP	((unsigned)(59 << CS))	/* long null annotation */
+				   
+/* putann: write annotation at annot to annotator n */
+//Se rellena la estructura "oa" del tipo oadata usando annot
+int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot)//sabemos n=0
+{
+    unsigned annwd;
     char *ap;
     int i, len;
     long delta;
-    WFDB_Time t;*/
-    //struct oadata *oa;
-
-   /* if (n >= noaf || (oa = oad[n]) == NULL || oa->file == NULL) {
-		//printf("putann: can't write annotation file %d\n", n);
-	return (-2);
-    }*/
-   /* if (annot->time == 0L)
+    WFDB_Time t;
+    struct oadata *oa;
+	//Intenta abrir el fichero:
+    if (n >= noaf || (oa = oad[n]) == NULL || oa->file == NULL) {
+	//wfdb_error("putann: can't write annotation file %d\n", n);
+		return (-2);
+    }
+	//Determina el instante t
+    if (annot->time == 0L)
 		t = 0L;
     else {
 		if (tmul <= 0.0) {
@@ -1639,74 +1655,103 @@ int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot){ //sabemos n=0
 		}
 		t = (WFDB_Time)(annot->time / tmul + 0.5);
     }
-    if (((delta = t - oa->ann.time) < 0L ||
-	(delta == 0L && annot->chan <= oa->ann.chan)) &&
-	(t != 0L || oa->ann.time != 0L)) {
-	oa->out_of_order = 1;
+    //Si "one or more annotations written by putann are not in the canonical (time, chan) order" :
+    if (((delta = t - oa->ann.time) < 0L ||(delta == 0L && annot->chan <= oa->ann.chan)) &&(t != 0L || oa->ann.time != 0L)) {
+		oa->out_of_order = 1;
     }
+    //Dependiendo del tipo de fichero de salida que sea el que contiene oa:
     switch (oa->info.stat) {
       case WFDB_WRITE:	/* MIT-format output file */
-   /*   default:
-	if (annot->anntyp == 0) {
-	    /* The caller intends to write a null annotation here, but putann
-	       must not write a word of zeroes that would be interpreted as
-	       an EOF.  To avoid this, putann writes a SKIP to the location
-	       just before the desired one;  thus annwd (below) is never 0. */
-/*	    wfdb_p16(SKIP, oa->file); wfdb_p32(delta-1, oa->file); delta = 1;
-	}
-	else if (delta > MAXRR || delta < 0L) {
-	    wfdb_p16(SKIP, oa->file); wfdb_p32(delta, oa->file); delta = 0;
-	}	
-	annwd = (int)delta + ((int)(annot->anntyp) << CS);
-	wfdb_p16(annwd, oa->file);
-	if (annot->subtyp != 0) {
-	    annwd = SUB + (DATA & annot->subtyp);
-	    wfdb_p16(annwd, oa->file);
-	}
-	if (annot->chan != oa->ann.chan) {
-	    annwd = CHN + (DATA & annot->chan);
-	    wfdb_p16(annwd, oa->file);
-	}
-	if (annot->num != oa->ann.num) {
-	    annwd = NUM + (DATA & annot->num);
-	    wfdb_p16(annwd, oa->file);
-	}
-	if (annot->aux != NULL && *annot->aux != 0) {
-	    annwd = AUX+(unsigned)(*annot->aux); 
-	    wfdb_p16(annwd, oa->file);
-	    (void)wfdb_fwrite(annot->aux + 1, 1, *annot->aux, oa->file);
-	    if (*annot->aux & 1)
-		(void)wfdb_putc('\0', oa->file);
-	}
-	break;
+      default:
+      		//Creo que esto es un caso de error:
+			if (annot->anntyp == 0) {
+			    /* The caller intends to write a null annotation here, but putann
+			       must not write a word of zeroes that would be interpreted as
+			       an EOF.  To avoid this, putann writes a SKIP to the location
+			       just before the desired one;  thus annwd (below) is never 0. */
+			    wfdb_p16(SKIP, oa->file); wfdb_p32(delta-1, oa->file); delta = 1;
+			}
+			else if (delta > MAXRR || delta < 0L) {
+			    wfdb_p16(SKIP, oa->file); wfdb_p32(delta, oa->file); delta = 0;
+			}	
+			
+			// OJO!!!!! MAXRR, SKIP, DATA, SUB, CS ... son todo contstantes definidas justo antes de esta funcion 
+			// Y las funciones estan en wfdbio.c :
+			// wfdb_p16		(writes a 16-bit integer)
+ 			// wfdb_p32		(writes a 32-bit integer)
+			// wfdb_mamap [10.4]	(function version of mamap, see ecgmap.h)en annot.c
+			
+			annwd = (int)delta + ((int)(annot->anntyp) << CS);
+			wfdb_p16(annwd, oa->file);
+			if (annot->subtyp != 0) {
+			    annwd = SUB + (DATA & annot->subtyp);
+			    wfdb_p16(annwd, oa->file);
+			}
+			if (annot->chan != oa->ann.chan) {
+			    annwd = CHN + (DATA & annot->chan);
+			    wfdb_p16(annwd, oa->file);
+			}
+			if (annot->num != oa->ann.num) {
+			    annwd = NUM + (DATA & annot->num);
+			    wfdb_p16(annwd, oa->file);
+			}
+			if (annot->aux != NULL && *annot->aux != 0) {
+			    annwd = AUX+(unsigned)(*annot->aux); 
+			    wfdb_p16(annwd, oa->file);
+			    (void)wfdb_fwrite(annot->aux + 1, 1, *annot->aux, oa->file);
+			    if (*annot->aux & 1)
+				(void)wfdb_putc('\0', oa->file);
+			}
+			break;
       case WFDB_AHA_WRITE:	/* AHA-format output file */
-/*	(void)wfdb_putc('\0', oa->file);
-	(void)wfdb_putc(mamap(annot->anntyp, annot->subtyp), oa->file);
-	wfdb_p32(t, oa->file);
-	wfdb_p16((unsigned int)(++(oa->seqno)), oa->file);
-	(void)wfdb_putc(annot->subtyp, oa->file);
-	(void)wfdb_putc(annot->anntyp, oa->file);
-	if (ap = annot->aux)
-	    len = (*ap < AUXLEN) ? *ap : AUXLEN;
-	else
-	    len = 0;
-	for (i = 0, ap++; i < len; i++, ap++)
-	    (void)wfdb_putc(*ap, oa->file);
-	for ( ; i < AUXLEN; i++)
-	    (void)wfdb_putc('\0', oa->file);
-	break;
+			(void)wfdb_putc('\0', oa->file);
+			(void)wfdb_putc(mamap(annot->anntyp, annot->subtyp), oa->file);
+			wfdb_p32(t, oa->file);
+			wfdb_p16((unsigned int)(++(oa->seqno)), oa->file);
+			(void)wfdb_putc(annot->subtyp, oa->file);
+			(void)wfdb_putc(annot->anntyp, oa->file);
+			if (ap = annot->aux)
+			    len = (*ap < AUXLEN) ? *ap : AUXLEN;
+			else
+			    len = 0;
+			for (i = 0, ap++; i < len; i++, ap++)
+			    (void)wfdb_putc(*ap, oa->file);
+			for ( ; i < AUXLEN; i++)
+			    (void)wfdb_putc('\0', oa->file);
+			break;
     }
+    
+    //Si el fichero de output da error
     if (wfdb_ferror(oa->file)) {
-		//printf("putann: write error on annotation file %s\n",  oa->info.name);
+	//wfdb_error("putann: write error on annotation file %s\n",oa->info.name);
 	return (-1);
     }
     oa->ann = *annot;
     oa->ann.time = t;
-    return (0);*/
+    return (0);
+}
+///.......................Funciones de wfdbio.c para putann.......................................
+int wfdb_putc(int c, WFDB_FILE *wp)
+{
+    if (wp->type == WFDB_NET)
+	return (nf_putc(c, wp->netfp));
+    return (putc(c, wp->fp));
 }
 
+/* write a 16-bit integer in PDP-11 format */
+void wfdb_p16(unsigned int x, WFDB_FILE *fp)
+{
+    (void)wfdb_putc((char)x, fp);
+    (void)wfdb_putc((char)(x >> 8), fp);
+}
 
-
+/* write a 32-bit integer in PDP-11 format */
+void wfdb_p32(long x, WFDB_FILE *fp)
+{
+    wfdb_p16((unsigned int)(x >> 16), fp);
+    wfdb_p16((unsigned int)x, fp);
+}
+//............................................................................................
 //http://physionet.org/physiotools/wpg/wpg_19.htm#SEC62
 //char *record, /*WFDB_Anninfo *aiarray, uint8_t nann,*/ WFDB_Siginfo *siarray, uint8_t nsig
 int8_t wfdbinit(char *record, WFDB_Siginfo *siarray, uint8_t nsig){
