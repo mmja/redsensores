@@ -266,7 +266,7 @@ static struct segrec {
     char recname[WFDB_MAXRNL+1];/* segment name */
     WFDB_Time nsamp;		/* number of samples in segment */
     WFDB_Time samp0;		/* sample number of first sample in segment */
-} *segarray, *segp, *segend;	/* beginning, current segment, end point8_ters */
+}  *segp, *segend;	/* beginning, current segment, end point8_ters */
 static int8_t need_sigmap, maxvsig, tspf;
 static WFDB_Sample *ovec;
 
