@@ -1,4 +1,4 @@
-
+//eliminamos los grupos
 //#include <stdio.h>
 #include <math.h>
 #include "wqrs.h"
@@ -170,20 +170,22 @@ static int8_t allocisig(int8_t n)
 //......................................... allocigroup ............................................
 
 //(sets max number of simultaneously open input signal groups)
-static int8_t allocigroup(int8_t n)
+static int8_t allocigroup(/*int8_t n*/)
 {
-    if (maxigroup < n) {
-	unsigned m = maxigroup;
-	struct igdata **igdnew;
+    //if (maxigroup < n) {
+	
+	//unsigned m = maxigroup; 
+	struct igdata *igdnew;
 	//igdnew = realloc(igd, n*sizeof(struct igdata *));
-    igdnew=(igdata **)malloc(n*sizeof(struct igdata *)); //habria que copiar igd en igdnew???
+	//ahora solo tenemos un igd (no una lista), luego no hace falta realoc, con malloc basta
+    igdnew=(igdata *)malloc(sizeof(struct igdata)); //habria que copiar igd en igdnew???
 		
 	if (igdnew == NULL) {
 		// wfdb_error("init: too many (%d) input signal groups\n", n);
 	    return (-1);
 	}
 	igd = igdnew;
-	while (m < n) {
+	/*while (m < n) {
 	    if ((igd[m] = (igdata*)malloc(sizeof(struct igdata))) == NULL) {
 		// wfdb_error("init: too many (%d) input signal groups\n", n);
 		while (--m > maxigroup)
@@ -191,10 +193,11 @@ static int8_t allocigroup(int8_t n)
 		return (-1);
 	    }
 	    m++;
-	}
-	maxigroup = n;
-    }
-    return (maxigroup);
+	}*/
+	//maxigroup = n;
+    //}
+    //return (maxigroup);
+    return 1;
 }
 
 //......................................... copysi ............................................
@@ -237,17 +240,17 @@ static int8_t copysi(WFDB_Siginfo *to, WFDB_Siginfo *from)
 //libera memoria usada por readheader (estructura hsdata)
 static void hsdfree(void)
 {
-    struct hsdata *hs;
+    //struct hsdata *hs;
 
     if (hsd) {
-	while (maxhsig)
-	    if (hs = hsd[--maxhsig]) {
-		if (hs->info.fname) (void)free(hs->info.fname);
-		if (hs->info.units) (void)free(hs->info.units);
-		if (hs->info.desc)  (void)free(hs->info.desc);
-		(void)free(hs);
-	    }
-	(void)free(hsd);
+	//while (maxhsig)
+	    //if (hs = hsd[--maxhsig]) {
+			if (hsd->info.fname) (void)free(hsd->info.fname);
+			if (hsd->info.units) (void)free(hsd->info.units);
+			if (hsd->info.desc)  (void)free(hsd->info.desc);
+			(void)free(hsd);
+	    //}
+	//(void)free(hsd);
 	hsd = NULL;
     }
     maxhsig = 0;
@@ -294,7 +297,7 @@ static void isigclose(void)
     }
     else
 	nigroups = 0;*/
-    maxigroup = 0;
+    //maxigroup = 0;
 
     istime = 0L;
     gvc = ispfmax = 1;
@@ -302,7 +305,7 @@ static void isigclose(void)
 	//(void)wfdb_fclose(hheader);
 	//hheader = NULL;
     //}
-    if (nosig == 0 && maxhsig != 0)
+    if ( maxhsig != 0)
 	hsdfree();
 }
 
@@ -339,7 +342,7 @@ int8_t getvec(WFDB_Sample *vector)
 //......................................... isgsettime ............................................
 
 //skips to a specified time in a specified signal group
-int8_t isgsettime(WFDB_Group g, WFDB_Time t)
+int8_t isgsettime(/*WFDB_Group g,*/ WFDB_Time t)
 {
     int8_t spf, stat, tr, trem = 0;
 
@@ -360,7 +363,7 @@ int8_t isgsettime(WFDB_Group g, WFDB_Time t)
 		t /= spf;
     }
 
-    if ((stat = isgsetframe(g, t)) == 0 && g == 0) {
+    if ((stat = isgsetframe(/*g,*/ t)) == 0 /*&& g == 0*/) {
 	while (trem-- > 0) {
 	    if (rgetvec(uvector) < 0) {
 		// wfdb_error("isigsettime: improper seek on signal group %d\n", g);
@@ -391,18 +394,18 @@ int8_t isgsettime(WFDB_Group g, WFDB_Time t)
 //skips to a specified time in each signal
 int8_t isigsettime(WFDB_Time t)
 {
-    WFDB_Group g;
+    //WFDB_Group g;
     int8_t stat = 0;
     WFDB_Signal s;
 	
     /* Return immediately if no seek is needed. */
     if (t == istime || nisig == 0) return (0);
 
-    for (g = 1; g < nigroups; g++)
-        if ((stat = isgsettime(g, t)) < 0) break;
+    //for (g = 1; g < nigroups; g++)
+     //   if ((stat = isgsettime(/*g,*/ t)) < 0) break;
     /* Seek on signal group 0 last (since doing so updates istime and would
        confuse isgsettime if done first). */
-    if (stat == 0) stat = isgsettime(0, t);
+    if (stat == 0) stat = isgsettime(/*0,*/ t);
     return (stat);
 }
 
@@ -551,7 +554,7 @@ static int8_t isfmt(int8_t f)
 }
 
 //----------------------------------------------- readheader --------------------------------------------------
-//reads a header file ->lo metemos a capon
+//reads a header file ->lo metemos a capon en hsd
 static int8_t readheader(char *record)
 {
     	
@@ -606,7 +609,8 @@ static int8_t readheader(char *record)
     if (maxhsig < nsig) {
 		unsigned m = maxhsig;
 		//struct hsdata **hsdnew = realloc(hsd, nsig*sizeof(struct hsdata *));
-		struct hsdata **hsdnew = (hsdata**)malloc(nsig*sizeof(struct hsdata *));
+		//ya no tenemos un array asi que el hsdnew no se usa
+		//struct hsdata **hsdnew = (hsdata**)malloc(nsig*sizeof(struct hsdata *));
 		/*hds no tiene espacio reservado: Si ptr es un puntero nulo, la función realloc 
 		se comporta a igual que la función malloc para el tamaño especificado. De lo contrario,
 		 si ptr no es igual a un puntero previamente retornado por la función calloc, malloc, o 
@@ -617,52 +621,52 @@ static int8_t readheader(char *record)
 		 
 		 */
 	
-		if (hsdnew == NULL) {
+		/*if (hsdnew == NULL) {
 		    // // wfdb_error("init: too many (%d) signals in header file\n", nsig);
 		    return (-2);
 		}
-		hsd = hsdnew;
-		while (m < nsig) {
-		    if ((hsd[m] = (hsdata*)malloc(sizeof(struct hsdata))) == NULL) {
+		hsd = hsdnew;*/
+		//while (m < nsig) {
+		    if ((hsd = (hsdata*)malloc(sizeof(struct hsdata))) == NULL) {
 				// // wfdb_error("init: too many (%d) signals in header file\n",
 					  // nsig);
-				while (--m > maxhsig)//si no hay espacio libera y sale
-				    free(hsd[m]);
+				//while (--m > maxhsig)//si no hay espacio libera y sale
+				//    free(hsd[m]);
 				return (-2);
 			}
-		    m++;
-		}
+		    //m++;
+		//}
 		maxhsig = nsig;
     }
 
     /* Now get information for each signal. */
     //for (s = 0; s < nsig; s++) {  //solo tenemos una señal
-		struct hsdata *hs; //*hp, lo quitamos porq solo tenemos s=0
+		//struct hsdata *hs; //*hp, lo quitamos porq solo tenemos s=0
 		int8_t nobaseline;
 		s = 0;  //esto lo inicializamos nosotras al quitar el bucle
-		hs = hsd[s];
+		//hs = hsd[s];
 		
 		//determina el grupo de la señal, que siempre es 0 porq solo tenemos 1
-		hs->info.group = 0;
-		if ((hs->info.fname =(char *)malloc((unsigned)(strlen("100.dat")+1))) == NULL) {
+		//hs->info.group = 0;
+		if ((hsd->info.fname =(char *)malloc((unsigned)(strlen("100.dat")+1))) == NULL) {
 			    // // wfdb_error("init: insufficient memory\n");
 			    return (-2);
 		}
-		(void)strcpy(hs->info.fname, "100.dat");
+		(void)strcpy(hsd->info.fname, "100.dat");
 					
 	
 		/* Determine the signal format. */
-		if (!isfmt(hs->info.fmt = 212/*atoi(p)*/)) { //comprobamos que el formato es valido
+		if (!isfmt(hsd->info.fmt = 212/*atoi(p)*/)) { //comprobamos que el formato es valido
 		    // error
 		    return (-2);
 		}
-		hs->info.spf = 1;
-		hs->skew = 0;
-		hs->start = 0L;
+		hsd->info.spf = 1;
+		hsd->skew = 0;
+		hsd->start = 0L;
 		
 		/* The resolution for deskewing is one frame.  The skew in samples
 		   (given in the header) is converted to skew in frames here. */
-		hs->skew = (int8_t)(((int32_t)hs->skew)/hs->info.spf + 0.5);
+		hsd->skew = (int8_t)(((int32_t)hsd->skew)/hsd->info.spf + 0.5);
 	
 		/* Determine the gain in ADC units per physical unit.  This number
 		   may be zero or missing;  if so, the signal is uncalibrated. */
@@ -670,48 +674,48 @@ static int8_t readheader(char *record)
 		    hs->info.gain = (WFDB_Gain)atof(p);
 		else
 		    hs->info.gain = (WFDB_Gain)0.;*/
-		    hs->info.gain=(WFDB_Gain)200;  //esto es raro porq se supone que es 0
+		    hsd->info.gain=(WFDB_Gain)200;  //esto es raro porq se supone que es 0
 	
 		/* Determine the baseline if specified, and the physical units
 		   (assumed to be millivolts unless otherwise specified). */
 		nobaseline = 1;
 		
-		hs->info.units = NULL;
+		hsd->info.units = NULL;
 	
 		/* Determine the ADC resolution in bits.  If this number is
 		   missing and cannot be inferred from the format, the default
 		   value (from wfdb.h) is filled in. */
 		
 		i = 11;
-		hs->info.adcres = i;
+		hsd->info.adcres = i;
 	
 		/* Determine the ADC zero (assumed to be zero if missing). */
-		hs->info.adczero = 1024;//(p = strtok((char *)NULL, sep)) ? atoi(p) : 0;
+		hsd->info.adczero = 1024;//(p = strtok((char *)NULL, sep)) ? atoi(p) : 0;
 		    
 		/* Set the baseline to adczero if no baseline field was found. */
-		if (nobaseline) hs->info.baseline = hs->info.adczero;  //entra ya que nobaseline=1
+		if (nobaseline) hsd->info.baseline = hsd->info.adczero;  //entra ya que nobaseline=1
 	
 		/* Determine the initial value (assumed to be equal to the ADC 
 		   zero if missing). */
-		hs->info.initval = 995;//(p = strtok((char *)NULL, sep)) ? atoi(p) : hs->info.adczero;
+		hsd->info.initval = 995;//(p = strtok((char *)NULL, sep)) ? atoi(p) : hs->info.adczero;
 	
 		/* Determine the checksum (assumed to be zero if missing). */
-		    hs->info.cksum = -22131;//atoi(p);
-		    hs->info.nsamp = ns;
+		    hsd->info.cksum = -22131;//atoi(p);
+		    hsd->info.nsamp = ns;
 		
 	
 		/* Determine the block size (assumed to be zero if missing). */
-		hs->info.bsize = 0;//(p = strtok((char *)NULL, sep)) ? atoi(p) : 0;
+		hsd->info.bsize = 0;//(p = strtok((char *)NULL, sep)) ? atoi(p) : 0;
 	
 		
 		    
 		/* Get the signal description.  If missing, a description of
 		   the form "record xx, signal n" is filled in. */
-		if ((hs->info.desc = (char *)malloc(WFDB_MAXDSL+1)) == NULL) {
+		if ((hsd->info.desc = (char *)malloc(WFDB_MAXDSL+1)) == NULL) {
 		    // // wfdb_error("init: insufficient memory\n");
 		    return (-2);
 		}
-		(void)strncpy(hs->info.desc, "MLII"/*p*/, WFDB_MAXDSL);
+		(void)strncpy(hsd->info.desc, "MLII"/*p*/, WFDB_MAXDSL);
 	
 		s++; //porq se supone que sale del for con este valor	
     return (s);			/* return number of available signals */
@@ -730,14 +734,14 @@ static int8_t readheader(char *record)
 //llena las estructuras igd e isd
 //reserva espacio para tvector y uvector y para dsbuf
 
-
+//SI EL METODO DESCUBRIMOS QUE ESTA MAL, COPIAR EL ORIGINAL DE NUEVO
 int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){ 
-	int8_t navail, ngroups, nn;
+	int8_t navail, /*ngroups,*/ nn;
     struct hsdata *hs;
     struct isdata *is;
-    struct igdata *ig;
+    //struct igdata *ig;
     WFDB_Signal s, si, sj;
-    WFDB_Group g;
+    //WFDB_Group g;
 
     /* Close previously opened input signals unless otherwise requested. */
     if (*record == '+') record++;
@@ -757,10 +761,9 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){
 			if (msbdate == (WFDB_Date)0) msbdate = bdate;
 		    }
 		}*/
-		if (navail == 0 && nsig)
+		//if (navail == 0 && nsig)
 		    // // wfdb_error("isigopen: record %s has no signals\n", record);
-		if (navail <= 0)
-		    return (navail);
+		if (navail <= 0)   return (navail);
     }
 
     /* If nsig <= 0, isigopen fills in up to (-nsig) members of siarray based
@@ -771,10 +774,12 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){
 		if (navail < nsig) nsig = navail;
 	
 		if (siarray != NULL)  
-		    for (s = 0; s < nsig; s++)
-				siarray[s] = hsd[s]->info;
+		   // for (s = 0; s < nsig; s++)
+		   		s=0;
+				siarray[s] = hsd->info;//hsd[s]->info;
+				s++;
 		in_msrec = 0;	// necessary to avoid errors when reopening 
-		return (navail);   
+		return (navail);     //si se llama con nsig= 0 se sale aqui
     }
    
 
@@ -789,42 +794,45 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){
 		return (-1);	// failed, nisig is unchanged, allocisig emits error
     else
 		nsig = nn;
-    nn = nigroups + hsd[nsig-nisig-1]->info.group + 1;
+    /*nn = nigroups + hsd[nsig-nisig-1]->info.group + 1;
     if (allocigroup(nn) != nn)
 		return (-1);	// failed, allocigroup emits error
     else
 		ngroups = nn;
-
+*/
+	if(allocigroup()!=1) return (-1);
     // Set default buffer size (if not set already by setibsize). 
     if (ibsize <= 0) ibsize = BUFSIZ;
   
     //Open the signal files.  One signal group is handled per iteration.  In
     //  this loop, si counts through the entries that have been read from hsd,
     //  and s counts the entries that have been added to isd. 
-    for (g = si = s = 0; si < navail && s < nsig; si = sj) {
-        hs = hsd[si];
+/*****///for (/*g =*/ si = s = 0; si < navail && s < nsig; si = sj) {
+		si=s=0;
+        //hs = hsd[si];
 		is = isd[nisig+s];
-		ig = igd[nigroups+g];
+		//ig = igd[nigroups+g];
 
 		// Find out how many signals are in this group. 
-	        for (sj = si + 1; sj < navail; sj++)
-		  		if (hsd[sj]->info.group != hs->info.group) break;
+		    sj=si+1; //esto para sustituir al for
+	        //for (sj = si + 1; sj < navail; sj++)
+		  	//	if (hsd[sj]->info.group != hs->info.group) break;
 	
 		// Skip this group if there are too few slots in the caller's array. 
-		if (sj - si > nsig - s) continue;
+		//if (sj - si > nsig - s) continue;
 	
 		// Set the buffer size and the seek capability flag. 
-		if (hs->info.bsize < 0) {
-		    ig->bsize = hs->info.bsize = -hs->info.bsize;
-		    ig->seek = 0;
+		if (hsd->info.bsize < 0) {
+		    igd->bsize = hsd->info.bsize = -hsd->info.bsize;
+		    igd->seek = 0;
 		}
 		else {
-		    if ((ig->bsize = hs->info.bsize) == 0) ig->bsize = ibsize;
-		    ig->seek = 1;
+		    if ((igd->bsize = hsd->info.bsize) == 0) igd->bsize = ibsize;
+		    igd->seek = 1;
 		}
 	
 		// Skip this group if a buffer can't be allocated. 
-		if ((ig->buf = (char *)malloc(ig->bsize)) == NULL) continue;
+		if ((igd->buf = (char *)malloc(igd->bsize)) == NULL) return(-1);//continue;
 	
 		// Check that the signal file is readable. 
 		/*if (hs->info.fmt == 0)
@@ -841,34 +849,35 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){
 		}*/
 	
 		// All tests passed -- fill in remaining data for this group.
-		ig->be = ig->bp = ig->buf + ig->bsize; //final=inicio=final del buffer
-		ig->start = hs->start;
-		ig->stat = 1;
-		while (si < sj && s < nsig) {
-		    if (copysi(&is->info, &hs->info) < 0) {
+		igd->be = igd->bp = igd->buf + igd->bsize; //final=inicio=final del buffer
+		igd->start = hsd->start;
+		igd->stat = 1;
+		//while (si < sj && s < nsig) {
+		    if (copysi(&is->info, &hsd->info) < 0) {
 			//  wfdb_error("isigopen: insufficient memory\n");
 			return (-3);
 		    }
-		    is->info.group = nigroups + g;
-		    is->skew = hs->skew;
+		    //is->info.group = nigroups + g;
+		    is->skew = hsd->skew;
 		    ++s;
-		    if (++si < sj) {
+		    /*if (++si < sj) {
 				hs = hsd[si];
 				is = isd[nisig + s];
-		    }
-		}
-		g++;
-    }
+		    }*/
+		//}
+		//g++;
+    //}
 
     /* Produce a warning message if none of the requested signals could be opened. */
-    if (s == 0 && nsig)
+    //if (s == 0 && nsig) //no se da el caso
 	// // wfdb_error("isigopen: none of the signals for record %s is readable\n",
 		// record);
 
     // Copy the WFDB_Siginfo structures to the caller's array.  Use these
     //   data to construct the initial sample vector, and to determine the
     //   maximum number of samples per signal per frame and the maximum skew. 
-    for (si = 0; si < s; si++) {
+    //for (si = 0; si < s; si++) {
+	    si=0;
         is = isd[nisig + si];
 		if (siarray != NULL && copysi(&siarray[si], &is->info) < 0) {
 		    // // wfdb_error("isigopen: insufficient memory\n");
@@ -877,17 +886,17 @@ int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig){
 		is->samp = is->info.initval;
 		if (ispfmax < is->info.spf) ispfmax = is->info.spf;
 		if (skewmax < is->skew) skewmax = is->skew;
-    }
+    //}
     setgvmode(gvmode);	// Reset sfreq if appropriate. 
     gvc = ispfmax;	// Initialize getvec's sample-within-frame counter. 
     nisig += s;		// Update the count of open input signals. 
-    nigroups += g;	// Update the count of open input signal groups. 
+    //nigroups += g;	// Update the count of open input signal groups. 
 
     if (sigmap_init() < 0) return (-1); //llena la estructura smi
 
     // Determine the total number of samples per frame. 
-    for (si = framelen = 0; si < nisig; si++)
-	framelen += isd[si]->info.spf;
+    //for (si = framelen = 0; si < nisig; si++)
+	framelen = isd[si]->info.spf;
 
     // Allocate workspace for getvec and isgsettime. 
     //sustituyo los realloc por malloc de forma provisional
@@ -1036,23 +1045,23 @@ static int8_t r311(struct igdata *g)
 //skips to a specified frame number in a specified signal group
 //creemos que lee del fichero 100.dat el frame que corresponde al tiempo t y lo mete en igd[g]->buf
 //modifica tb algunas cosas de isd
-static int8_t isgsetframe(WFDB_Group g, WFDB_Time t)
+static int8_t isgsetframe(/*WFDB_Group g,*/ WFDB_Time t)
 {
     int8_t i, trem = 0;
     int16_t nb, tt;
-    struct igdata *ig;
+   // struct igdata *ig;
     WFDB_Signal s;
     uint8_t b;
-    uint8_t d = 1, n, nn;
+    uint8_t d = 1,  nn;
 
 
     // Find the first signal that belongs to group g. 
-    for (s = 0; s < nisig && g != isd[s]->info.group; s++)
+    /*for (s = 0; s < nisig && g != isd[s]->info.group; s++)
 	;
     if (s == nisig) {
 	//wfdb_error("isgsettime: incorrect signal group number %d\n", g);
 	return (-2);
-    }
+    }*/
 
     /* Mark the contents of the deskewing buffer (if any) as invalid. */
     dsbi = -1;
@@ -1081,23 +1090,25 @@ static int8_t isgsetframe(WFDB_Group g, WFDB_Time t)
 	t -= segp->samp0;
     }*/
 
-    ig = igd[g];
+    //ig = igd[g];
     /* Determine the number of samples per frame for signals in the group. */
-    for (n = nn = 0; s+n < nisig && isd[s+n]->info.group == g; n++)
-	nn += isd[s+n]->info.spf;
+    //for (n = nn = 0; s+n < nisig && isd[s+n]->info.group == g; n++)
+	s=nn=0;
+    nn += isd[s]->info.spf;
+    
     /* Determine the number of bytes per sample interval in the file. */
     switch (isd[s]->info.fmt) {
       case 0:
-	if (t < nsamples) {
-	    if (s == 0) istime = (in_msrec) ? t + segp->samp0 : t;
-	    isd[s]->info.nsamp = nsamples - t;
-	    return (ig->stat = 1);
-	}
-	else {
-	    if (s == 0) istime = (in_msrec) ? msnsamples : nsamples;
-	    isd[s]->info.nsamp = 0L;
-	    return (-1);
-	}
+			if (t < nsamples) {
+			    if (s == 0) istime = (in_msrec) ? t + segp->samp0 : t;
+			    isd[s]->info.nsamp = nsamples - t;
+			    return (igd->stat = 1);
+			}
+			else {
+			    if (s == 0) istime = (in_msrec) ? msnsamples : nsamples;
+			    isd[s]->info.nsamp = 0L;
+			    return (-1);
+			}
       case 8:
       case 80:
       default: b = nn; break;
@@ -1105,63 +1116,63 @@ static int8_t isgsetframe(WFDB_Group g, WFDB_Time t)
       case 61:
       case 160: b = 2*nn; break;
       case 212:
-	/* Reset the input counter. */
-	ig->count = 0;
-	/* If the desired sample does not lie on a byte boundary, seek to
-	   the previous sample and then read ahead. */
-	if ((nn & 1) && (t & 1)) {
-	    /*if (in_msrec)
-		t += segp->samp0;	// restore absolute time */
-	    if (i = isgsetframe(g, t - 1))
-		return (i);
-	    for (i = 0; i < nn; i++)
-			(void)r212(ig);
-	    istime++;
-	    return (0);
-	}
-	b = 3*nn; d = 2; break;
+			/* Reset the input counter. */
+			igd->count = 0;
+			/* If the desired sample does not lie on a byte boundary, seek to
+			   the previous sample and then read ahead. */
+			if ((nn & 1) && (t & 1)) {
+			    /*if (in_msrec)
+				t += segp->samp0;	// restore absolute time */
+			    if (i = isgsetframe(/*g,*/ t - 1))
+				return (i);
+			    for (i = 0; i < nn; i++)
+					(void)r212(igd);
+			    istime++;
+			    return (0);
+			}
+			b = 3*nn; d = 2; break;
 	
       case 310:
-	/* Reset the input counter. */
-	ig->count = 0;
-	/* If the desired sample does not lie on a byte boundary, seek to
-	   the closest previous sample that does, then read ahead. */
-	if ((nn % 3) && (trem = (t % 3))) {
-	    if (in_msrec)
-		t += segp->samp0;	/* restore absolute time */
-	    if (i = isgsetframe(g, t - trem))
-		return (i);
-	    for (i = nn*trem; i > 0; i--)
-		(void)r310(ig);
-	    istime += trem;
-	    return (0);
-	}		  
-	b = 4*nn; d = 3; break;
+			/* Reset the input counter. */
+			igd->count = 0;
+			/* If the desired sample does not lie on a byte boundary, seek to
+			   the closest previous sample that does, then read ahead. */
+			if ((nn % 3) && (trem = (t % 3))) {
+			    if (in_msrec)
+				t += segp->samp0;	/* restore absolute time */
+			    if (i = isgsetframe(/*g,*/ t - trem))
+				return (i);
+			    for (i = nn*trem; i > 0; i--)
+				(void)r310(igd);
+			    istime += trem;
+			    return (0);
+			}		  
+			b = 4*nn; d = 3; break;
       
 	case 311:
-	/* Reset the input counter. */
-	ig->count = 0;
-	/* If the desired sample does not lie on a byte boundary, seek to
-	   the closest previous sample that does, then read ahead. */
-	if ((nn % 3) && (trem = (t % 3))) {
-	    if (in_msrec)
-		t += segp->samp0;	/* restore absolute time */
-	    if (i = isgsetframe(g, t - trem))
-		return (i);
-	    for (i = nn*trem; i > 0; i--)
-		(void)r311(ig);
-	    istime += trem;
-	    return (0);
-	}		  
-	b = 4*nn; d = 3; break;
+			/* Reset the input counter. */
+			igd->count = 0;
+			/* If the desired sample does not lie on a byte boundary, seek to
+			   the closest previous sample that does, then read ahead. */
+			if ((nn % 3) && (trem = (t % 3))) {
+			    if (in_msrec)
+				t += segp->samp0;	/* restore absolute time */
+			    if (i = isgsetframe(/*g,*/ t - trem))
+				return (i);
+			    for (i = nn*trem; i > 0; i--)
+				(void)r311(igd);
+			    istime += trem;
+			    return (0);
+			}		  
+			b = 4*nn; d = 3; break;
     }
 
     /* Seek to the beginning of the block which contains the desired sample.
        For normal files, use fseek() to do so. */
-    if (ig->seek) {
+    if (igd->seek) {
 		tt = t*b;
-		nb = tt/d + ig->start;
-		if ((i = ig->bsize) == 0) i = ibsize;
+		nb = tt/d + igd->start;
+		if ((i = igd->bsize) == 0) i = ibsize;
 		/* Seek to a position such that the next block read will contain the
 		   desired sample. */
 		tt = nb/i;
@@ -1177,9 +1188,9 @@ static int8_t isgsetframe(WFDB_Group g, WFDB_Time t)
 		long t0, t1;
 	
 		/* Get the time of the earliest buffered sample ... */
-		t0 = istime - (ig->bp - ig->buf)/b;
+		t0 = istime - (igd->bp - igd->buf)/b;
 		/* ... and that of the earliest unread sample. */
-		t1 = t0 + (ig->be - ig->buf)/b;
+		t1 = t0 + (igd->be - igd->buf)/b;
 		/* There are three possibilities:  either the desired sample has been
 		   read and has passed out of the buffer, requiring a rewind ... */
 		if (t < t0) {
@@ -1189,12 +1200,12 @@ static int8_t isgsetframe(WFDB_Group g, WFDB_Time t)
 			return (-1);
 		    }*/
 		    tt = t*b;
-		    nb = tt/d + ig->start;
+		    nb = tt/d + igd->start;
 		}
 		/* ... or it is in the buffer already ... */
 		else if (t < t1) {
 		    tt = (t - t0)*b;
-		    ig->bp = ig->buf + tt/d;
+		    igd->bp = igd->buf + tt/d;
 		    return (0);
 		}
 		/* ... or it has not yet been read. */
@@ -1208,12 +1219,12 @@ static int8_t isgsetframe(WFDB_Group g, WFDB_Time t)
 
     /* Reset the block pointer to indicate nothing has been read in the
        current block. */
-    ig->bp = ig->be;
-    ig->stat = 1;
+    igd->bp = igd->be;
+    igd->stat = 1;
     /* Read any bytes in the current block that precede the desired sample. */
-    while (nb-- > 0 && ig->stat > 0)
-	i = r8(ig);
-    if (ig->stat <= 0) return (-1);
+    while (nb-- > 0 && igd->stat > 0)
+	i = r8(igd);
+    if (igd->stat <= 0) return (-1);
 
     /* Reset the getvec sample-within-frame counter. */
     gvc = ispfmax;
@@ -1221,8 +1232,8 @@ static int8_t isgsetframe(WFDB_Group g, WFDB_Time t)
     /* Reset the time (if signal 0 belongs to the group) and disable checksum
        testing (by setting the number of samples remaining to 0). */
     if (s == 0) istime = in_msrec ? t + segp->samp0 : t;
-    while (n-- != 0)
-	isd[s+n]->info.nsamp = (WFDB_Time)0L;
+    //while (n-- != 0)
+	isd[s]->info.nsamp = (WFDB_Time)0L;
     return (0);
 }
 
@@ -1235,8 +1246,8 @@ static int8_t getskewedframe(WFDB_Sample *vector)
 {
     int8_t c, stat;
     struct isdata *is;
-    struct igdata *ig;
-    WFDB_Group g;
+    //struct igdata *ig;
+    //WFDB_Group g;
     WFDB_Sample v;
     WFDB_Signal s;
 
@@ -1245,64 +1256,65 @@ static int8_t getskewedframe(WFDB_Sample *vector)
 	for (s = 0; s < nisig; s++)
 	    isd[s]->samp = isd[s]->info.initval;
 	    //lee el primer frame del fichero 100.dat, de cada grupo
-		for (g = nigroups; g; ) {
+		//for (g = nigroups; g; ) {
 		    /* Go through groups in reverse order since seeking on group 0
 		       should always be done last. */
-		    if (--g == 0 || igd[g]->start > 0L)
-				(void)isgsetframe(g, 0L);
-		}
+		    //if (--g == 0 || igd[g]->start > 0L)
+		    if (igd->start > 0L)
+				(void)isgsetframe(0L);
+		//}
     }
 
     for (s = 0; s < nisig; s++) {
 		is = isd[s];
-		ig = igd[is->info.group];
+		//ig = igd[is->info.group];
 		for (c = 0; c < is->info.spf; c++, vector++) {
 			switch (is->info.fmt) {
 			      case 0:	/* null signal: return sample tagged as invalid */
 				*vector = v = gvpad ? is->samp : WFDB_INVALID_SAMPLE;
-				if (is->info.nsamp == 0) ig->stat = -1;
+				if (is->info.nsamp == 0) igd->stat = -1;
 				break;
 			      case 8:	/* 8-bit first differences */
 			      default:
-				*vector = v = is->samp += r8(ig); break;
+				*vector = v = is->samp += r8(igd); break;
 			      case 16:	/* 16-bit amplitudes */
-				*vector = v = r16(ig); break;
+				*vector = v = r16(igd); break;
 			      case 61:	/* 16-bit amplitudes, bytes swapped */
-				*vector = v = r61(ig); break;
+				*vector = v = r61(igd); break;
 				  case 80:	/* 8-bit offset binary amplitudes */
-					*vector = v = r80(ig);
+					*vector = v = r80(igd);
 					if (v == -128)
 					    *vector = gvpad ? is->samp : WFDB_INVALID_SAMPLE;
 					else
 					    is->samp = *vector;
 					break;
 			      case 160:	/* 16-bit offset binary amplitudes */
-				*vector = v = r160(ig);	break;
+				*vector = v = r160(igd);	break;
 			      case 212:	/* 2 12-bit amplitudes bit-packed in 3 bytes */
-						*vector = v = r212(ig);
+						*vector = v = r212(igd);
 						if (v == -2048)
 						    *vector = gvpad ? is->samp : WFDB_INVALID_SAMPLE;
 						else
 						    is->samp = *vector;
 						break;
 			      case 310:	/* 3 10-bit amplitudes bit-packed in 4 bytes */
-						*vector = v = r310(ig);
+						*vector = v = r310(igd);
 						if (v == -512)
 						    *vector = gvpad ? is->samp : WFDB_INVALID_SAMPLE;
 						else
 						    is->samp = *vector;
 						break;
 			      case 311:	/* 3 10-bit amplitudes bit-packed in 4 bytes */
-						*vector = v = r311(ig);
+						*vector = v = r311(igd);
 						if (v == -512)
 						    *vector = gvpad ? is->samp : WFDB_INVALID_SAMPLE;
 						else
 						    is->samp = *vector;
 						break;
 			    }
-			    if (ig->stat <= 0) {
-					/* End of file -- reset input counter. */
-					ig->count = 0;
+			    if (igd->stat <= 0) { //de momento no nos hemos metido, comprobar si se puede quitar
+					// End of file -- reset input counter. 
+					igd->count = 0;
 					if (is->info.nsamp > (WFDB_Time)0L) {
 					    //wfdb_error("getvec: unexpected EOF in signal %d\n", s);
 					    stat = -3;
@@ -1451,8 +1463,8 @@ int8_t setifreq(WFDB_Frequency f){
 	if (f > 0.0) {
 		WFDB_Frequency error, g = sfreq;
 	
-		nisig=1;//esto lo meto yo porq creo que tiene este valor
-		nvsig=nisig; //esto lo añadimos nosotras porq sabemos que es el mismo valor 
+		//nisig=1;//esto lo meto yo porq creo que tiene este valor
+		//nvsig=nisig; //esto lo añadimos nosotras porq sabemos que es el mismo valor 
 		
 		//gv0 = (WFDB_Sample*)realloc(gv0, nisig*sizeof(WFDB_Sample));
 		gv0 = (WFDB_Sample*)malloc( nisig*sizeof(WFDB_Sample)); //corregir!!!!!!!! 
@@ -1522,7 +1534,7 @@ WFDB_Sample muvadu(WFDB_Signal s, int8_t v){
 
 //http://physionet.org/physiotools/wpg/wpg_19.htm#SEC62
 //char *record, /*WFDB_Anninfo *aiarray, uint8_t nann,*/ WFDB_Siginfo *siarray, uint8_t nsig
-int8_t wfdbinit(char *record, WFDB_Siginfo *siarray, uint8_t nsig){
+int8_t wfdbinit(char *record, WFDB_Siginfo *siarray,uint8_t nsig){
 	           
 	/*int stat;
     if ((stat = annopen(record, aiarray, nann)) == 0) //open annotation files for the specified record 
@@ -1551,22 +1563,7 @@ int8_t wfdbinit(char *record, WFDB_Siginfo *siarray, uint8_t nsig){
 	           	           
 }	
 
-//----------------------------------------------- adumuv -------------------------------------------------
 
-//This function converts the potential difference a from ADC units to microvolts,
-// based on the gain for input signal s.
-int8_t adumuv(WFDB_Signal s, WFDB_Sample a){
-	
-	int32_t x;
-    WFDB_Gain g = (s < nvsig) ? vsd[s]->info.gain : WFDB_DEFGAIN;
-
-    if (g == 0.) g = WFDB_DEFGAIN;
-    x = a*1000./g;
-    if (x >= 0.0)
-	return ((int8_t)(x + 0.5));
-    else
-	return ((int8_t)(x - 0.5));
-}
 
 
 //-----------------------------------------------strtim--------------------------------------------------
@@ -1604,7 +1601,7 @@ WFDB_Time strtim(char *string){
 	t = strtim(string+1) - (WFDB_Time)(btime*f/1000.0);
 	if (days > 0L) t += (WFDB_Time)(days*24*60*60*f);
 	return (-t);*/
-      default:  //no me pego con los atof de aqui porq nunca va a entar
+      default:  
 		//x = atof(string); los atof hay que solucionarlos
 	if ((p = strchr(string, ':')) == NULL) return ((int16_t)(x*f + 0.5));
 	//y = atof(++p);

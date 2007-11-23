@@ -217,8 +217,8 @@ main(int8_t argc, char **argv)
    
     setgvmode(gvmode|WFDB_GVPAD);
 	//nota: isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig)
-    //if ((nsig = isigopen("100"/*record*/, NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
-    nsig=1;
+    if ((nsig = isigopen("100"/*record*/, NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
+    //nsig=1;
     
     if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
 		
