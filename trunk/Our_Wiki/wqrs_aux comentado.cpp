@@ -1,5 +1,22 @@
 
+//----------------------------------------------- adumuv -------------------------------------------------
 
+//This function converts the potential difference a from ADC units to microvolts,
+// based on the gain for input signal s.
+int8_t adumuv(WFDB_Signal s, WFDB_Sample a){
+	
+	int32_t x;
+    WFDB_Gain g = (s < nvsig) ? vsd[s]->info.gain : WFDB_DEFGAIN;
+
+    if (g == 0.) g = WFDB_DEFGAIN;
+    x = a*1000./g;
+    if (x >= 0.0)
+	return ((int8_t)(x + 0.5));
+    else
+	return ((int8_t)(x - 0.5));
+}
+
+//--------------------------------------- readheader -------------------------------------------------------
 static int8_t readheader(char *record)
 {
     	

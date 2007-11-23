@@ -7,7 +7,7 @@
 typedef int16_t	     WFDB_Sample;   /* units are adus */
 typedef int32_t 	 WFDB_Time;	    /* units are sample intervals */
 typedef double	 WFDB_Gain;	    /* units are adus per physical unit */
-typedef uint8_t WFDB_Group;    /* signal group number */
+//typedef uint8_t WFDB_Group;    /* signal group number */
 typedef uint16_t WFDB_Signal;   /* signal number */
 typedef uint8_t WFDB_Annotator;/* annotator number */
 typedef double	     WFDB_Frequency;/* units are Hz (samples/second/signal) */
@@ -17,10 +17,10 @@ typedef int16_t	     WFDB_Date;	    /* units are days */
 
 
 //Estructuras
-struct WFDB_anninfo {	/* annotator information structure */
-    char *name;		/* annotator name */
-    int8_t stat;		/* file type/access code (READ, WRITE, etc.) */
-};
+//struct WFDB_anninfo {	/* annotator information structure */
+ //   char *name;		/* annotator name */
+ //   int8_t stat;		/* file type/access code (READ, WRITE, etc.) */
+//};
 /* WFDB_siginfo '.fmt' values  FORMATOS VALIDOS PARA FMT
 FMT_LIST is suitable as an initializer for a static array; it lists all of
 the legal values for the format field in a WFDB_siginfo structure.
@@ -41,7 +41,7 @@ struct WFDB_siginfo {	/* signal information structure */
     char *units;	/* physical units (mV unless otherwise specified) */
     WFDB_Gain gain;	/* gain (ADC units/physical unit, 0: uncalibrated) */
     WFDB_Sample initval; 	/* initial value (that of sample number 0) */
-    WFDB_Group group;	/* signal group number *///esto puede que sobre porq siempre es 0(solo hay una señal)
+   // WFDB_Group group;	/* signal group number *///esto puede que sobre porq siempre es 0(solo hay una señal)
     int8_t fmt;		/* format (8, 16, etc.) */
     int8_t spf;		/* samples per frame (>1 for oversampled signals) */
     int8_t bsize;		/* block size (for character special files only) */
@@ -58,15 +58,14 @@ static struct sigmapinfo {
     int8_t index;
     int8_t spf;		/* samples per frame (>1 for oversampled signals) */
 } *smi;
-struct WFDB_ann {		/* annotation structure */
-    WFDB_Time time;	/* annotation time, in sample intervals from
-			   the beginning of the record */
-    char anntyp;	/* annotation type (< ACMAX, see <wfdb/ecgcodes.h> */
-    signed char subtyp;	/* annotation subtype */
-    signed char chan;	/* channel number */
-    signed char num;	/* annotator number */
-    char *aux;		/* pointer to auxiliary information */ 
-};
+//struct WFDB_ann {		/* annotation structure */
+ //   WFDB_Time time;	/* annotation time, in sample intervals from the beginning of the record */
+//    char anntyp;	/* annotation type (< ACMAX, see <wfdb/ecgcodes.h> */
+//    signed char subtyp;	/* annotation subtype */
+//    signed char chan;	/* channel number */
+//    signed char num;	/* annotator number */
+//    char *aux;		/* pointer to auxiliary information */ 
+//};
 /*struct WFDB_FILE {
   FILE *fp;
   struct netfile *netfp;
@@ -74,9 +73,9 @@ struct WFDB_ann {		/* annotation structure */
 };
 /* Composite data types */
 
-typedef struct WFDB_ann WFDB_Annotation;
+//typedef struct WFDB_ann WFDB_Annotation;
 typedef struct WFDB_siginfo WFDB_Siginfo;
-typedef struct WFDB_anninfo WFDB_Anninfo;
+//typedef struct WFDB_anninfo WFDB_Anninfo;
 typedef struct sigmapinfo sigmapinfo;
 
 
@@ -138,17 +137,17 @@ void setgvmode(int8_t mode);
 int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig);
 int8_t setifreq(WFDB_Frequency f);
 WFDB_Sample muvadu(WFDB_Signal s, int8_t v);
-int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot);
+//int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot);
 int8_t wfdbinit(char *record, WFDB_Siginfo *siarray, uint8_t nsig);
 void wfdbquit(void);
 //int8_t adumuv(WFDB_Signal s, WFDB_Sample a);
 //WFDB_Time strtim(char *string);
-WFDB_Frequency sampfreq(char *record);
+//WFDB_Frequency sampfreq(char *record);
 //int8_t getvec(WFDB_Sample *vector);
 static int8_t copysi(WFDB_Siginfo *to, WFDB_Siginfo *from);
 //int8_t isgsettime(WFDB_Group g, WFDB_Time t);
 //int8_t isigsettime(WFDB_Time t);
-static int8_t isgsetframe(WFDB_Group g, WFDB_Time t);
+static int8_t isgsetframe(/*WFDB_Group g,*/ WFDB_Time t);
 static int rgetvec(WFDB_Sample *vector);
 
 
@@ -203,7 +202,7 @@ static struct igdata {		/* shared by all signals in a group (file) */
     char count;			/* input counter for bit-packed signal */
     char seek;			/* flag to indicate if seeks are permitted */
     int8_t stat;			/* signal file status flag */
-} **igd;
+} *igd; //**igd;
 typedef struct isdata isdata;
 typedef struct igdata igdata;
 
@@ -213,9 +212,9 @@ static int8_t sample_vflag;	/* if non-zero, last value returned by sample()
 				   was valid */
 /* These variables relate to open input signals. */
 static unsigned maxisig;	/* max number of input signals */
-static unsigned maxigroup;	/* max number of input signal groups */
+//static unsigned maxigroup;	/* max number of input signal groups */
 static unsigned nisig;		/* number of open input signals - numero de elementos de isd*/
-static unsigned nigroups;	/* number of open input signal groups */
+//static unsigned nigroups;	/* number of open input signal groups */
 static unsigned maxspf;		/* max allowed value for ispfmax */
 static unsigned ispfmax;	/* max number of samples of any open signal
 				   per input frame */
@@ -276,7 +275,7 @@ static struct hsdata {
     WFDB_Siginfo info;		/* info about signal from header */
     int16_t start;			/* signal file byte offset to sample 0 */
     int8_t skew;			/* intersignal skew (in frames) */
-} **hsd;
+} *hsd;//**hsd;
 
 typedef struct hsdata hsdata;
 
@@ -297,9 +296,9 @@ static int8_t gvpad;		/* getvec padding (if non-zero, replace invalid
 				   samples with previous valid samples) */
 /* These variables relate to output signals. */
 static unsigned maxosig;	/* max number of output signals */
-static unsigned maxogroup;	/* max number of output signal groups */
-static unsigned nosig;		/* number of open output signals */
-static unsigned nogroups;	/* number of open output signal groups */
+//static unsigned maxogroup;	/* max number of output signal groups */
+//static unsigned nosig;		/* number of open output signals */
+//static unsigned nogroups;	/* number of open output signal groups */
 //static WFDB_FILE *oheader;	/* file point8_ter for output header file */lo comento xq es de FILE**************
 
 static WFDB_Time ostime;	/* time of next output sample */
