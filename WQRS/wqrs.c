@@ -81,7 +81,7 @@ and then compare its output with the reference annotations by:
 *******************comienza el programa**********************************************
 *************************************************************************************/
 
-#define BUFLN  16384	/* must be a power of 2, see ltsamp() */
+//#define BUFLN  16384	/* must be a power of 2, see ltsamp() */
 #define EYE_CLS 0.25    /* eye-closing period is set to 0.25 sec (250 ms) */ 
 //#define LPERIOD 1000	/* learning period is the first LPERIOD samples */
 #define MaxQRSw 0.13    /* maximum QRS width (130ms) */                        
@@ -213,11 +213,10 @@ main(int8_t argc, char **argv)
     }
     
 
-
    
     setgvmode(gvmode|WFDB_GVPAD);
 	//nota: isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig)
-    if ((nsig = isigopen("100"/*record*/, NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
+    if ((nsig = isigopen(/*record,*/ NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
     //nsig=1;
     
     if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
@@ -225,7 +224,7 @@ main(int8_t argc, char **argv)
 		exit(2);
     }
     //a.name = "wqrs"; a.stat = WFDB_WRITE;
-    if ((nsig = wfdbinit("100"/*record*/, /*&a, 1, */s, nsig)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
+    if ((nsig = wfdbinit(/*record,*/ /*&a, 1, */s, nsig)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
     
     
     

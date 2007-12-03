@@ -1,0 +1,15 @@
+Mirar si esto sobra:
+
+
+need_sigmap
+allocisig
+hsdfree
+getvec
+readheader
+ibsize
+BuFSIZ
+smi
+tvector
+uvector
+dsbuf
+istime
