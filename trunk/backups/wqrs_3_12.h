@@ -135,11 +135,11 @@ typedef struct sigmapinfo sigmapinfo;
 WFDB_Sample sample(WFDB_Signal s, WFDB_Time t);
 int8_t sample_valid(void);
 void setgvmode(int8_t mode);
-int8_t isigopen(WFDB_Siginfo *siarray, int8_t nsig);
+int8_t isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig);
 int8_t setifreq(WFDB_Frequency f);
 WFDB_Sample muvadu(WFDB_Signal s, int8_t v);
 //int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot);
-int8_t wfdbinit( WFDB_Siginfo *siarray, uint8_t nsig);
+int8_t wfdbinit(char *record, WFDB_Siginfo *siarray, uint8_t nsig);
 void wfdbquit(void);
 //int8_t adumuv(WFDB_Signal s, WFDB_Sample a);
 //WFDB_Time strtim(char *string);
@@ -148,6 +148,8 @@ void wfdbquit(void);
 static int8_t copysi(WFDB_Siginfo *to, WFDB_Siginfo *from);
 //int8_t isgsettime(WFDB_Group g, WFDB_Time t);
 //int8_t isigsettime(WFDB_Time t);
+static int8_t isgsetframe(/*WFDB_Group g,*/ WFDB_Time t);
+static int rgetvec(WFDB_Sample *vector);
 
 
 
@@ -179,11 +181,13 @@ extern char *sprintf();
 */
 /*************************** variables en signal.c **********************/
 
+static int8_t nvsig;    //puede que sea el num elementos de vsd
+static struct isdata *vsd;
 static struct isdata {		/* unique for each input signal -señales abiertas*/
     WFDB_Siginfo info;		/* input signal information */
     WFDB_Sample samp;		/* most recent sample read */
     int8_t skew;			/* intersignal skew (in frames) */
-} *isd;
+} **isd;
 
 //esto se usa en isigopen y a lo mejor hay que quitarlo porq no tenemos grupos
 static struct igdata {		/* shared by all signals in a group (file) */
@@ -208,6 +212,7 @@ static int8_t gvc;			/* getvec sample-within-frame counter */
 static int8_t sample_vflag;	/* if non-zero, last value returned by sample()
 				   was valid */
 /* These variables relate to open input signals. */
+static unsigned maxisig;	/* max number of input signals */
 //static unsigned maxigroup;	/* max number of input signal groups */
 static unsigned nisig;		/* number of open input signals - numero de elementos de isd*/
 //static unsigned nigroups;	/* number of open input signal groups */
@@ -249,8 +254,19 @@ static WFDB_Sample *uvector;	/* isgsettime workspace */
    the variables 'msbtime', 'msbdate', and 'msnsamples' are filled in by
    setmsheader based on btime and bdate for the first segment, and on the
    sum of the 'nsamp' fields for all segments.  */
+static int8_t segments;		/* number of segments found by readheader() */
+static int8_t in_msrec;		/* current input record is: 0: a single-segment
+				   record; 1: a multi-segment record */
+static int16_t msbtime;		/* base time for multi-segment record */
+static WFDB_Date msbdate;	/* base date for multi-segment record */
+static WFDB_Time msnsamples;	/* duration of multi-segment record */
 static int16_t btime;		/* base time (milliseconds since midnight) */
 static WFDB_Date bdate;		/* base date (Julian date) */
+static struct segrec {
+    char recname[WFDB_MAXRNL+1];/* segment name */
+    WFDB_Time nsamp;		/* number of samples in segment */
+    WFDB_Time samp0;		/* sample number of first sample in segment */
+}  *segp, *segend;	/* beginning, current segment, end point8_ters */
 static int8_t need_sigmap, maxvsig, tspf;
 static WFDB_Sample *ovec;
 
