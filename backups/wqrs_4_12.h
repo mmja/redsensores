@@ -11,7 +11,7 @@ typedef double	 WFDB_Gain;	    /* units are adus per physical unit */
 typedef uint16_t WFDB_Signal;   /* signal number */
 typedef uint8_t WFDB_Annotator;/* annotator number */
 typedef double	     WFDB_Frequency;/* units are Hz (samples/second/signal) */
-//typedef int16_t	     WFDB_Date;	    /* units are days */
+typedef int16_t	     WFDB_Date;	    /* units are days */
 
 //#define BUFLN   4096	/* must be a power of 2, see sample() */
 #define BUFLN  16384	/* must be a power of 2, see ltsamp() */
@@ -52,12 +52,32 @@ struct WFDB_siginfo {	/* signal information structure */
     int16_t nsamp;		/* number of samples (0: unspecified) */
     int16_t cksum;		/* 16-bit checksum of all samples */
 };
+static struct sigmapinfo {
+    char *desc;
+    int32_t gain, scale, offset;
+    WFDB_Sample baseline;		/* ADC output given 0 physical units input */
+    int8_t index;
+    int8_t spf;		/* samples per frame (>1 for oversampled signals) */
+} *smi;
+//struct WFDB_ann {		/* annotation structure */
+ //   WFDB_Time time;	/* annotation time, in sample intervals from the beginning of the record */
+//    char anntyp;	/* annotation type (< ACMAX, see <wfdb/ecgcodes.h> */
+//    signed char subtyp;	/* annotation subtype */
+//    signed char chan;	/* channel number */
+//    signed char num;	/* annotator number */
+//    char *aux;		/* pointer to auxiliary information */ 
+//};
+/*struct WFDB_FILE {
+  FILE *fp;
+  struct netfile *netfp;
+  int type;
+};
 /* Composite data types */
 
 //typedef struct WFDB_ann WFDB_Annotation;
 typedef struct WFDB_siginfo WFDB_Siginfo;
 //typedef struct WFDB_anninfo WFDB_Anninfo;
-//typedef struct sigmapinfo sigmapinfo;
+typedef struct sigmapinfo sigmapinfo;
 
 
 //typedef struct netfile netfile;
@@ -70,7 +90,8 @@ typedef struct WFDB_siginfo WFDB_Siginfo;
 
 #define WFDB_LOWRES   	0	/* return one sample per signal per frame */
 
-//#define WFDB_HIGHRES	1	/* return each sample of oversampled signals, duplicating samples of other signals */
+#define WFDB_HIGHRES	1	/* return each sample of oversampled signals,
+				   duplicating samples of other signals */
 #define WFDB_GVPAD	2	/* replace invalid samples with previous valid
 				  samples */
 #define WFDB_DEFGAIN	200.0  /* default value for gain (adu/physical unit) */
@@ -84,6 +105,7 @@ typedef struct WFDB_siginfo WFDB_Siginfo;
 #define WFDB_WRITE     1   /* standard output annotation file */
 //#define WFDB_AHA_READ  2   /* AHA-format input annotation file */
 //#define WFDB_AHA_WRITE 3   /* AHA-format output annotation file */
+#define BUFSIZ     1024   /* constante de stdio */
 
 
 
@@ -110,12 +132,12 @@ typedef struct WFDB_siginfo WFDB_Siginfo;
 
 //int wfdb_ferror(WFDB_FILE *wp);
 
-WFDB_Sample sample(/*WFDB_Signal s, */WFDB_Time t);
+WFDB_Sample sample(WFDB_Signal s, WFDB_Time t);
 int8_t sample_valid(void);
 void setgvmode(int8_t mode);
 int8_t isigopen(WFDB_Siginfo *siarray, int8_t nsig);
 int8_t setifreq(WFDB_Frequency f);
-WFDB_Sample muvadu(/*WFDB_Signal s,*/ int8_t v);
+WFDB_Sample muvadu(WFDB_Signal s, int8_t v);
 //int8_t putann(WFDB_Annotator n, WFDB_Annotation *annot);
 int8_t wfdbinit( WFDB_Siginfo *siarray, uint8_t nsig);
 void wfdbquit(void);
@@ -160,7 +182,7 @@ extern char *sprintf();
 static struct isdata {		/* unique for each input signal -señales abiertas*/
     WFDB_Siginfo info;		/* input signal information */
     WFDB_Sample samp;		/* most recent sample read */
-    //int8_t skew;			/* intersignal skew (in frames) */
+    int8_t skew;			/* intersignal skew (in frames) */
 } *isd;
 
 //esto se usa en isigopen y a lo mejor hay que quitarlo porq no tenemos grupos
@@ -182,7 +204,7 @@ typedef struct isdata isdata;
 typedef struct igdata igdata;
 
 
-//static int8_t gvc;			/* getvec sample-within-frame counter */
+static int8_t gvc;			/* getvec sample-within-frame counter */
 static int8_t sample_vflag;	/* if non-zero, last value returned by sample()
 				   was valid */
 /* These variables relate to open input signals. */
@@ -194,6 +216,7 @@ static unsigned ispfmax;	/* max number of samples of any open signal
 				   per input frame */
 static int8_t dsbi;		/* index to oldest sample in dsbuf (if < 0,
 				   dsbuf does not contain valid data) */
+static WFDB_Time istime;	/* time of next input sample */
 static WFDB_Frequency ffreq;	/* frame rate (frames/second) frame rate*/
 static WFDB_Frequency ifreq;	/* samples/second/signal returned by getvec */
 static WFDB_Frequency sfreq;	/* samples/second/signal read by getvec sampling rate*/
@@ -205,12 +228,38 @@ static WFDB_Sample *gv0, *gv1;
 static WFDB_Sample *uvector;	/* isgsettime workspace */
 
 #define WFDB_MAXRNL   20   /* maximum length of record name */
+/* The next set of variables contains information about multi-segment records.
+   The first two of them ('segments' and 'in_msrec') are used primarily as
+   flags to indicate if a record contains multiple segments.  Unless 'in_msrec'
+   is set already, readheader sets 'segments' to the number of segments
+   indicated in the header file it has most recently read (0 for a
+   single-segment record).  If it reads a header file for a multi-segment
+   record, readheader also sets the variables 'msbtime', 'msbdate', and
+   'msnsamples'; allocates and fills 'segarray'; and sets 'segp' and 'segend'.
+   Note that readheader's actions are not restricted to records opened for
+   input.
+
+   If isigopen finds that 'segments' is non-zero, it sets 'in_msrec' and then
+   invokes readheader again to obtain signal information from the header file
+   for the first segment, which must be a single-segment record (readheader
+   refuses to open a header file for a multi-segment record if 'in_msrec' is
+   set).
+
+   When creating a header file for a multi-segment record using setmsheader,
+   the variables 'msbtime', 'msbdate', and 'msnsamples' are filled in by
+   setmsheader based on btime and bdate for the first segment, and on the
+   sum of the 'nsamp' fields for all segments.  */
+static int16_t btime;		/* base time (milliseconds since midnight) */
+static WFDB_Date bdate;		/* base date (Julian date) */
+static int8_t need_sigmap, maxvsig, tspf;
+static WFDB_Sample *ovec;
 
 
+static int16_t ibsize;		/* default input buffer size */
 static struct hsdata {
     WFDB_Siginfo info;		/* info about signal from header */
     int16_t start;			/* signal file byte offset to sample 0 */
-    //int8_t skew;			/* intersignal skew (in frames) */
+    int8_t skew;			/* intersignal skew (in frames) */
 } *hsd;//**hsd;
 
 typedef struct hsdata hsdata;
@@ -220,16 +269,30 @@ static unsigned maxhsig;	/* # of hsdata structures pointed to by hsd */
 //Esto lo comento xq no usamos files ************************************************
 //static WFDB_FILE *hheader;	/* file point8_ter for header file */
 
-//static unsigned skewmax;	/* max skew (frames) between any 2 signals */
-//static WFDB_Sample *dsbuf;	/* deskewing buffer */
+static WFDB_Sample *tvector;	/* getvec workspace */
+static int8_t tuvlen;		/* lengths of tvector and uvector in samples */
+static unsigned skewmax;	/* max skew (frames) between any 2 signals */
+static WFDB_Sample *dsbuf;	/* deskewing buffer */
 static unsigned dsblen;		/* capacity of dsbuf, in samples */
 static unsigned framelen;	/* total number of samples per frame */
 static int8_t gvmode = -1;		/* getvec mode (WFDB_HIGHRES or WFDB_LOWRES
 				   once initialized) */
 static int8_t gvpad;		/* getvec padding (if non-zero, replace invalid
 				   samples with previous valid samples) */
+/* These variables relate to output signals. */
+static unsigned maxosig;	/* max number of output signals */
+//static unsigned maxogroup;	/* max number of output signal groups */
+//static unsigned nosig;		/* number of open output signals */
+//static unsigned nogroups;	/* number of open output signal groups */
+//static WFDB_FILE *oheader;	/* file point8_ter for output header file */lo comento xq es de FILE**************
+
+static WFDB_Time ostime;	/* time of next output sample */
+static int8_t obsize;		/* default output buffer size */
 
 
+static WFDB_Frequency cfreq;	/* counter frequency (ticks/second) */
+static double bcount;		/* base count (counter value at sample 0) */
+/* Local functions (not accessible outside this file). */
 
 /****************************contenidos de wfdbf.c***********************/
 

@@ -252,7 +252,7 @@ main(int argc, char **argv)
 	help();
 	exit(1);
     }
-	printf("bufsiz %d",BUFSIZ);
+	
     
     if (gvmode == 0 && (p = getenv("WFDBGVMODE")))
 	gvmode = atoi(p);
@@ -454,6 +454,7 @@ main(int argc, char **argv)
 	printf("\n\nDone! \n\nResulting annotation file:  %s.wqrs\n\n\n",
 	       record);
     }
+    printf("%d\n",sig);
     exit(0);
 }
 
