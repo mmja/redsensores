@@ -1,0 +1,20 @@
+la primera columna es la señal ECG
+
+y las otras 3 columnas son la señal después de ser procesada usando 
+la LT (length-transform)
+cada columna tiene un tamaño de ventana distinto
+para la primera columna de esas 3, el tamaño de ventana es 2, 
+para la segunda 5 y para la tercera 10
+lo importante del paper es la fórmula (1)
+al principio del apartado 2
+básicamente este algoritmo es una especie de filtro muy sencillo,
+ mediante el cual se acentúan los picos de la señal de entrada, 
+mientras que el resto de la señal es prácticamente plana
+dependiendo del tamaño de la ventana los picos se acentúan más o menos
+como el complejo QRS son 3 picos seguidos, eso se va a transformar 
+en un pico más grande
+así que después de aplicar la transformadas se puede decir: 
+si la señal es mayor de 200, estamos dentro del complejo QRS, 
+si la señal es menor lo descartamos
+de todas formas no sé si el algoritmo hace alguna cosilla más, 
+porque todavía no he profundizado mucho en él, pero habría que analizarlo bien
