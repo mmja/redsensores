@@ -147,8 +147,8 @@ static void isigclose(void)
     }
     
 
-   
-    //gvc = ispfmax = 1;
+    istime = 0L;
+    gvc = ispfmax = 1;
     
    
 	hsdfree();
@@ -200,7 +200,7 @@ int8_t isigsettime(WFDB_Time t)
     WFDB_Signal s;
 	
     /* Return immediately if no seek is needed. */
-    if (t == 0 || nisig == 0) return (0);
+    if (t == istime || nisig == 0) return (0);
 
   
     /* Seek on signal group 0 last (since doing so updates istime and would
@@ -214,7 +214,7 @@ int8_t isigsettime(WFDB_Time t)
 //consultar funciones http://physionet.org/physiotools/wpg/wpg_toc.htm
 //This function return the value (in raw adus) of sample number t in open signal s,
 //if successful, or the value of the previous successfully read sample.
-WFDB_Sample sample(/*WFDB_Signal s,*/ WFDB_Time t){
+WFDB_Sample sample(WFDB_Signal s, WFDB_Time t){
  	static WFDB_Sample v;
     static WFDB_Time tt;
 
@@ -231,10 +231,10 @@ WFDB_Sample sample(/*WFDB_Signal s,*/ WFDB_Time t){
     /* If the caller requested a sample from an unavailable signal, return
        an invalid value.  Note that sample_vflag is not cleared in this
        case.  */
-    /*if (s < 0 || s >= nisig) {
+    if (s < 0 || s >= nisig) {
         sample_vflag = -1; //esto es para sample_valid
 		return (WFDB_INVALID_SAMPLE);
-    }*/
+    }
 
     /* If the caller specified a negative sample number, prepare to return
        sample 0.  This behavior differs from the convention that only the
@@ -264,7 +264,7 @@ WFDB_Sample sample(/*WFDB_Signal s,*/ WFDB_Time t){
 
     /* The requested sample is in the buffer.  Set sample_vflag and
        return the requested sample. */
-    if ((v = *(sbuf + nisig * (t&(BUFLN-1)) /*+ s*/)) == WFDB_INVALID_SAMPLE)
+    if ((v = *(sbuf + nisig * (t&(BUFLN-1)) + s)) == WFDB_INVALID_SAMPLE)
         sample_vflag = -1;
     else
         sample_vflag = 1;
@@ -296,10 +296,14 @@ void setgvmode(int8_t mode){
     }*/
     mode = WFDB_LOWRES; //modo por defecto
 
-    
+    if ((mode & WFDB_HIGHRES) == WFDB_HIGHRES) {  
+		gvmode = WFDB_HIGHRES;
+		sfreq = ffreq * ispfmax;
+    }
+    else {
 		gvmode = WFDB_LOWRES;
 		sfreq = ffreq;
-    
+    }
 	
 	if ((mode & WFDB_GVPAD) == WFDB_GVPAD)
 	gvpad = 1;
@@ -346,7 +350,11 @@ static int8_t readheader()
        frequency record and WFDB_HIGHRES mode is in effect. */
     sfreq = ffreq;
 
-    
+    /* Determine the counter frequency and the base counter value. */
+    cfreq = bcount = 0.0;
+   
+    if (cfreq <= 0.0) cfreq = ffreq;
+
     /* Determine the number of samples per signal, if present and not
        set already. */
     	ns=650000;
@@ -415,12 +423,12 @@ static int8_t readheader()
 	
 		
 		hsd->info.spf = 1;
-		//hsd->skew = 0;
+		hsd->skew = 0;
 		hsd->start = 0L;
 		
 		/* The resolution for deskewing is one frame.  The skew in samples
 		   (given in the header) is converted to skew in frames here. */
-		//hsd->skew = (int8_t)(((int32_t)hsd->skew)/hsd->info.spf + 0.5);
+		hsd->skew = (int8_t)(((int32_t)hsd->skew)/hsd->info.spf + 0.5);
 	
 		/* Determine the gain in ADC units per physical unit.  This number
 		   may be zero or missing;  if so, the signal is uncalibrated. */
@@ -528,7 +536,8 @@ int8_t isigopen(WFDB_Siginfo *siarray, int8_t nsig){
 		nsig = nn;
     
 	
-    
+    // Set default buffer size (if not set already by setibsize). 
+    if (ibsize <= 0) ibsize = BUFSIZ;
   
     //Open the signal files.  One signal group is handled per iteration.  In
     //  this loop, si counts through the entries that have been read from hsd,
@@ -540,7 +549,7 @@ int8_t isigopen(WFDB_Siginfo *siarray, int8_t nsig){
 			return (-3);
 		    }
 		  
-		    //isd->skew = hsd->skew;
+		    isd->skew = hsd->skew;
 		
 
   
@@ -552,10 +561,10 @@ int8_t isigopen(WFDB_Siginfo *siarray, int8_t nsig){
 		}
 		isd->samp = isd->info.initval;
 		if (ispfmax < isd->info.spf) ispfmax = isd->info.spf;
-		//if (skewmax < isd->skew) skewmax = isd->skew;
+		if (skewmax < isd->skew) skewmax = isd->skew;
    
     setgvmode(gvmode);	// Reset sfreq if appropriate. 
-    //gvc = ispfmax;	// Initialize getvec's sample-within-frame counter. 
+    gvc = ispfmax;	// Initialize getvec's sample-within-frame counter. 
     nisig =1;		// Update the count of open input signals. 
    
     
@@ -614,9 +623,9 @@ int8_t setifreq(WFDB_Frequency f){
 		return (0);
     }
     else {
-		ifreq = 0.0;
-		//wfdb_error("setifreq: improper frequency %g (must be > 0)\n", f);
-		return (-1);
+	ifreq = 0.0;
+	//wfdb_error("setifreq: improper frequency %g (must be > 0)\n", f);
+	return (-1);
     }
 	
 }
@@ -625,11 +634,11 @@ int8_t setifreq(WFDB_Frequency f){
 //his function converts the potential difference v from microvolts to ADC units, 
 //based on the gain for input signal s.
 
-WFDB_Sample muvadu(/*WFDB_Signal s,*/ int8_t v){
+WFDB_Sample muvadu(WFDB_Signal s, int8_t v){
 			//return 0;
 
     int32_t x;
-    WFDB_Gain g = isd->info.gain;//(s < nisig) ? isd->info.gain : WFDB_DEFGAIN;
+    WFDB_Gain g = (s < nisig) ? isd->info.gain : WFDB_DEFGAIN;
 
     if (g == 0.) g = WFDB_DEFGAIN;
     x = g*v*0.001;
@@ -681,7 +690,7 @@ int8_t wfdbinit( WFDB_Siginfo *siarray,uint8_t nsig){
 WFDB_Time strtim(char *string){
 	char *p;
     double f, x, y, z;
-   
+    WFDB_Date days = 0L;
     WFDB_Time t;
 
     if (ifreq > 0.) f = ifreq;
@@ -690,20 +699,19 @@ WFDB_Time strtim(char *string){
     while (*string==' ' || *string=='\t' || *string=='\n' || *string=='\r')
 	string++;
     switch (*string) {
-     
+     /* case 'c': return (cfreq > 0. ?
+			(WFDB_Time)((atof(string+1)-bcount)*f/cfreq) :
+			(WFDB_Time)atol(string+1));*/
 			
 	//en nuestro programa solo va a darse esta opcion
-      //case 'e':	return ( nsamples *  ((gvmode == WFDB_HIGHRES) ? ispfmax : 1));  //aqui ademas siempre devolvera 1 ya que no se da HIGHRES
-    case 'e':	return  nsamples ;  
+      case 'e':	return ( nsamples *  ((gvmode == WFDB_HIGHRES) ? ispfmax : 1));  //aqui ademas siempre devolvera 1 ya que no se da HIGHRES
+    
       default:  
-		//x = atof(string); entra un "8", entero, y los atoi si los coge
-		x=atoi(string);
+		//x = atof(string); los atof hay que solucionarlos
 	if ((p = strchr(string, ':')) == NULL) return ((int16_t)(x*f + 0.5));
 	//y = atof(++p);
-	y=atoi(++p);
 	if ((p = strchr(p, ':')) == NULL) return ((int16_t)((60.*x + y)*f + 0.5));
 	//z = atof(++p);
-	z=atoi(++p);
 	return ((WFDB_Time)((3600.*x + 60.*y + z)*f + 0.5));
     }	
 	

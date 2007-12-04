@@ -1,15 +1,24 @@
 Mirar si esto sobra:
 
 
-need_sigmap
-allocisig
-hsdfree
-getvec
-readheader
-ibsize
-BuFSIZ
-smi
-tvector
-uvector
-dsbuf
-istime
+need_sigmap	x no se usa ya
+allocisig	x necesario hasta que borremos isd
+hsdfree		x no se puede quitar aun
+getvec		x lo borramos ayer
+readheader	x no lo quitamos aun
+ibsize		x borrado
+BuFSIZ		x borrado (era una cte de stdio)
+smi		x borrado
+tvector		x borrado
+uvector		x borrado
+dsbuf		x comentado ya que solo reservamos espacio pero no lo usamos
+		   quitado el dsbuf el skew ya no tiene sentido, comento todo lo relacionado
+
+istime		x borrado
+gvc		x comentado, al haber eliminado getvec ya no lo usamos
+strtim		x sustituidos los atof por atoi, que se lo traga 
+		(valido porque la entrada es un entero --> "8")
+
+WFDB_HIGHRES	x quito esta posibilidad porque se que no se va a dar (probado!)
+muvadu		x quito entrada WFDB_Signal s porque solo tenemos una señal (0 siempre)
+main		x quito el metodo char *prog_name(s), no es util

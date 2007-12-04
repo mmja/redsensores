@@ -90,7 +90,7 @@ and then compare its output with the reference annotations by:
 #define TmDEF	 100	/* minimum threshold value (default) */
 
 
-char *pname;		/* the name by which this program was invoked */
+//char *pname;		/* the name by which this program was invoked */
 int32_t lfsc;		/* length function scale constant */
 int8_t *ebuf;
 int8_t nsig;		/* number of input signals */
@@ -140,9 +140,9 @@ WFDB_Sample ltsamp(WFDB_Time t)
 	
 		Yn2 = Yn1;
 		Yn1 = Yn;
-		if ((v0 = sample(sig, tt)) != WFDB_INVALID_SAMPLE &&
-		    (v1 = sample(sig, tt-LPn)) != WFDB_INVALID_SAMPLE &&
-		    (v2 = sample(sig, tt-LP2n)) != WFDB_INVALID_SAMPLE)
+		if ((v0 = sample(/*sig,*/ tt)) != WFDB_INVALID_SAMPLE &&
+		    (v1 = sample(/*sig,*/ tt-LPn)) != WFDB_INVALID_SAMPLE &&
+		    (v2 = sample(/*sig,*/ tt-LP2n)) != WFDB_INVALID_SAMPLE)
 		    Yn = 2*Yn1 - Yn2 + v0 - 2*v1 + v2;
 		dy = (Yn - Yn1) / LP2n;		/* lowpass derivative of input */
 		et = ebuf[(++tt)&(BUFLN-1)] = sqrtf(lfsc +dy*dy); /* length transform */
@@ -174,43 +174,19 @@ main(int8_t argc, char **argv)
     WFDB_Siginfo *s;
     WFDB_Time  t, tpq, tt, t1,from = 0L, to = 0L;
     static int8_t gvmode = 0; //esta se usa para la opcion H pero me creo q tb se usa en otras cosas
-    char *prog_name();
+    //char *prog_name();
     
    
    
 
-    pname = prog_name(argv[0]);
+    //pname = prog_name(argv[0]);
+    
+    //quito las opciones del principio porque siempre vamos a tener lo mismo y ya no hay record
+    //  ./wqrs -r 100 -p 100 -R
 
-    for (i = 1; i < argc; i++) {
-	if (*argv[i] == '-') 
-	switch (*(argv[i]+1)) {
-	
-	  case 'p':	/* specify power line (mains) frequency */
-	    if (++i >= argc || (PWFreq = atoi(argv[i])) <= 0) {
-		//(void)fprintf(stderr,"%s: power line frequency ( > 0) must follow -p\n", pname);
-		exit(1);
-	    }
-	    break;
-	  case 'r':	// record name 
-	    if (++i >= argc) {
-		
-		exit(1);
-	    }
-	   
-	    break;
-	  case 'R':	// resample 
-	    Rflag = 1;
-	    break;
-	
-	  default:
-	   
-	    exit(1);
-	}
-	else {
-	  
-	    exit(1);
-	}
-    }
+    PWFreq=100;  //opcion -p
+    Rflag = 1;   //opcion -R
+    
     
 
    
@@ -236,10 +212,10 @@ main(int8_t argc, char **argv)
     	else setifreq(sps = 150.); //solo deberia quedarse esta opcion
     }
    
-     to = strtim("e");//siempre hace else ya que to=0L
+     to = strtim("e");//siempre hace else ya que to=0L, va a dar to=nsambles=65000
 
    
-    Tm = muvadu(sig, Tm);
+    Tm = muvadu(/*sig,*/ Tm);
     //samplingInterval = 1000.0/sps;
     lfsc = 1.25*gain*gain/sps;	/* length function scale constant */
    
@@ -252,7 +228,7 @@ main(int8_t argc, char **argv)
     ExpectPeriod = sps * NDP;	   /* maximum expected RR interval */
     LTwindow = sps * MaxQRSw;     /* length transform window size */
 
-    (void)sample(sig, 0L);
+    (void)sample(/*sig,*/ 0L);
     
     
     
@@ -306,7 +282,7 @@ main(int8_t argc, char **argv)
 	
 				if (!learning) {
 				    /* Check that we haven't reached the end of the record. */
-				    (void)sample(sig, tpq);
+				    (void)sample(/*sig,*/ tpq);
 				    if (sample_valid() == 0) break;
 				    /* Record an annotation at the QRS onset */
 				   
@@ -346,7 +322,7 @@ main(int8_t argc, char **argv)
     exit(0);
 }
 
-char *prog_name(s)
+/*char *prog_name(s)
 char *s;
 {
     char *p = s + strlen(s);
@@ -354,9 +330,9 @@ char *s;
 	#ifdef MSDOS
 	    while (p >= s && *p != '\\' && *p != ':') {
 		if (*p == '.')
-		    *p = '\0';		/* strip off extension */
+		    *p = '\0';		// strip off extension 
 		if ('A' <= *p && *p <= 'Z')
-		    *p += 'a' - 'A';	/* convert to lower case */
+		    *p += 'a' - 'A';	// convert to lower case 
 		p--;
 	    }
 	#else
@@ -364,5 +340,5 @@ char *s;
 		p--;
 	#endif
 	    return (p+1);
-}
+}*/
 
