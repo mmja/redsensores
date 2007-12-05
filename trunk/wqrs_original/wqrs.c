@@ -294,7 +294,9 @@ main(int argc, char **argv)
     annot.chan = sig;
     annot.aux = NULL;
     Tm = muvadu((unsigned)sig, Tm);
+    
     samplingInterval = 1000.0/sps;
+    
     lfsc = 1.25*gain*gain/sps;	/* length function scale constant */
     spm = 60 * sps;
     next_minute = from + spm;

@@ -93,11 +93,11 @@ and then compare its output with the reference annotations by:
 //char *pname;		/* the name by which this program was invoked */
 int32_t lfsc;		/* length function scale constant */
 int8_t *ebuf;
-int8_t nsig;		/* number of input signals */
+//int8_t nsig;		/* number of input signals */
 int8_t LPn, LP2n;          /* filter parameters (dependent on sampling rate) */
 int8_t LTwindow;           /* LT window size */
 int8_t PWFreq = PWFreqDEF;	/* power line (mains) frequency, in Hz */
-int8_t sig = 0;	        /* signal number of signal to be analyzed */
+//int8_t sig = 0;	        /* signal number of signal to be analyzed */
 int8_t Tm = TmDEF;		/* minimum threshold value */
 WFDB_Sample *lbuf = NULL;
 
@@ -160,7 +160,7 @@ main(int8_t argc, char **argv)
     //float samplingInterval;          /* sampling interval, in milliseconds */
     int8_t i, max, min, onset, timer;
     
-    int8_t Rflag = 0;		     /* if non-zero, resample at 120 or 150 Hz  */
+    //int8_t Rflag = 0;		     /* if non-zero, resample at 120 or 150 Hz  */
     
     int8_t EyeClosing;                  /* eye-closing period, related to SR */
     int8_t ExpectPeriod;                /* if no QRS is detected over this period,
@@ -171,9 +171,9 @@ main(int8_t argc, char **argv)
    
     WFDB_Gain gain;
     //WFDB_Sample *v;
-    WFDB_Siginfo *s;
+    WFDB_Siginfo s;
     WFDB_Time  t, tpq, tt, t1,from = 0L, to = 0L;
-    static int8_t gvmode = 0; //esta se usa para la opcion H pero me creo q tb se usa en otras cosas
+    //static int8_t gvmode = 0; //esta se usa para la opcion H pero me creo q tb se usa en otras cosas
     //char *prog_name();
     
    
@@ -185,32 +185,31 @@ main(int8_t argc, char **argv)
     //  ./wqrs -r 100 -p 100 -R
 
     PWFreq=100;  //opcion -p
-    Rflag = 1;   //opcion -R
+    //Rflag = 1;   //opcion -R
     
     
 
    
-    setgvmode(gvmode|WFDB_GVPAD);
+    setgvmode(0|WFDB_GVPAD);
 	//nota: isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig)
-    if ((nsig = isigopen(/*record,*/ NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
-    //nsig=1;
+    if (( isigopen(/*record,*/ NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
+  
     
-    if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
+   /* if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
 		
 		exit(2);
-    }
+    }*/
     //a.name = "wqrs"; a.stat = WFDB_WRITE;
-    if ((nsig = wfdbinit(/*record,*/ /*&a, 1, */s, nsig)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
+    if (( isigopen(/*record,*/ /*&a, 1, */&s, 1)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
     
     
     
-    sig=0;//analizamos una sola señal
-    if ((gain = s[sig].gain) == 0.0) gain = WFDB_DEFGAIN;
+    //sig=0;//analizamos una sola señal
+    if ((gain = s.gain) == 0.0) gain = WFDB_DEFGAIN;
     sps = sfreq; //sampfreq((char *)NULL); no hace falta usar este metodo, ya he comprobado que es 0
-    if (Rflag) {  
-    	if (PWFreq == 60.0) setifreq(sps = 120.);
-    	else setifreq(sps = 150.); //solo deberia quedarse esta opcion
-    }
+    
+    ifreq=150.;
+    sps=150.;
    
      to = strtim("e");//siempre hace else ya que to=0L, va a dar to=nsambles=65000
 

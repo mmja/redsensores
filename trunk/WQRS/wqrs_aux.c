@@ -7,38 +7,171 @@
 
 #include <io.h>
 /************************************declaraciones*******************************************/
-
-WFDB_Sample sbuf[32]={	766,
-1064,
+WFDB_Sample sbuf[lonbuf]={	
+990,
+938,
+944,
+960,
+955,
+958,
+960,
+961,
+956,
+957,
+955,
+958,
+957,
+959,
 953,
-1024,
-972,
-1018,
-975,
-1008,
-977,
-999,
-979,
-1000,
-976,
-998,
-988,
-993,
-973,
-981,
-968,
-973,
-965,
-975,
-967,
-968,
-964,
-967,
+956,
+961,
+960,
+957,
+956,
+954,
+952,
+957,
+958,
+955,
+957,
+959,
+956,
+957,
+956,
+954,
+952,
+957,
+958,
+956,
+956,
+957,
+954,
+954,
+956,
+957,
+953,
+956,
+957,
+954,
+952,
+955,
+954,
+952,
+951,
+951,
+948,
+950,
+952,
+949,
+950,
+951,
+951,
+950,
+958,
+958,
+956,
 962,
+965,
+965,
+966,
+971,
+974,
+971,
+976,
+976,
+973,
+974,
+974,
+973,
+974,
+972,
+971,
+970,
+971,
+970,
+966,
+970,
+970,
+967,
 968,
+970,
 968,
 966,
-964};	/* buffer used by sample() */
+968,
+966,
+963,
+964,
+963,
+961,
+965,
+967,
+964,
+963,
+965,
+962,
+960,
+963,
+964,
+958,
+961,
+963,
+960,
+958,
+961,
+962,
+962,
+963,
+964,
+963,
+963,
+967,
+963,
+961,
+964,
+968,
+969,
+969,
+973,
+974,
+980,
+983,
+981,
+978,
+979,
+978,
+977,
+976,
+981,
+980,
+968,
+965,
+959,
+958,
+960,
+960,
+956,
+955,
+955,
+953,
+956,
+958,
+957,
+953,
+959,
+957,
+952,
+949,
+937,
+927,
+917,
+936,
+979,
+1040,
+1132,
+1198,
+1208,
+1144,
+1033};	/* buffer used by sample() */
 //#define BUFLN   4096	/* must be a power of 2, see sample() */
 
 
@@ -156,115 +289,24 @@ static void isigclose(void)
 
 
 
-
-//......................................... isgsettime ............................................
-
-//skips to a specified time in a specified signal group
-int8_t isgsettime(/*WFDB_Group g,*/ WFDB_Time t)
-{
-    int8_t spf,  tr;
-
-    /* Handle negative arguments as equivalent positive arguments. */
-    if (t < 0L) t = -t;
-
-    tr = t;
-
-    /* Convert t to raw sample int8_tervals if we are resampling. */
-    if (ifreq > (WFDB_Frequency)0)
-	t = (WFDB_Time)(t * sfreq/ifreq);
-
-    /* If we're in WFDB_HIGHRES mode, convert t from samples to frames, and
-       save the remainder (if any) in trem. */
-    if (sfreq != ffreq) {
-		spf = (int8_t)(sfreq/ffreq);
-		
-		t /= spf;
-    }
-
-   
-    if (ifreq > (WFDB_Frequency)0 && tr != t) 
-	t = (WFDB_Time)(t * ifreq/sfreq);
-
-	
-
-    return (1);
-}
-
-//......................................... isigsettime ............................................
-
-
-//skips to a specified time in each signal
-int8_t isigsettime(WFDB_Time t)
-{
-    int8_t stat = 0;
-    WFDB_Signal s;
-	
-    /* Return immediately if no seek is needed. */
-    if (t == 0 || nisig == 0) return (0);
-
-  
-    /* Seek on signal group 0 last (since doing so updates istime and would
-       confuse isgsettime if done first). */
-    if (stat == 0) stat = isgsettime(/*0,*/ t);
-    return (stat);
-}
-
-
 //********************************************* SAMPLE  ***************************************
 //consultar funciones http://physionet.org/physiotools/wpg/wpg_toc.htm
 //This function return the value (in raw adus) of sample number t in open signal s,
 //if successful, or the value of the previous successfully read sample.
 WFDB_Sample sample(/*WFDB_Signal s,*/ WFDB_Time t){
  	static WFDB_Sample v;
-    static WFDB_Time tt;
-
-    /* Allocate the sample buffer on the first call. */
-    if (sbuf == NULL) {
-		//sbuf= (WFDB_Sample *)malloc((unsigned)nisig*BUFLN*sizeof(WFDB_Sample));
-		if (sbuf) tt = (WFDB_Time)-1L;
-		else {
-		  //  (void)fprint8_tf(stderr, "sample(): insufficient memory\n");
-		    exit(2);
-		}
-    }
-
-    /* If the caller requested a sample from an unavailable signal, return
-       an invalid value.  Note that sample_vflag is not cleared in this
-       case.  */
-    /*if (s < 0 || s >= nisig) {
-        sample_vflag = -1; //esto es para sample_valid
-		return (WFDB_INVALID_SAMPLE);
-    }*/
+    
 
     /* If the caller specified a negative sample number, prepare to return
        sample 0.  This behavior differs from the convention that only the
        absolute value of the sample number matters. */
     if (t < 0L) t = 0L;
 
-    /* If the caller has requested a sample that is no inter in the buffer,
-       or if the caller has requested a sample that is further ahead than the
-       length of the buffer, we need to reset the signal file pointer(s).
-       If we do this, we must be sure that the buffer is refilled so that
-       any subsequent requests for samples between t - BUFLN+1 and t will
-       receive correct responses. */
-    /*if (t <= tt - BUFLN || t > tt + BUFLN) {
-		tt = t - BUFLN;
-		if (tt < 0L) tt = -1L;
-		else if (isigsettime(tt-1) < 0) exit(2);
-    }*/
-    /* If the requested sample is not yet in the buffer, read and buffer
-       more samples.  If we reach the end of the record, clear sample_vflag
-       and return the last valid value. */
-    /*while (t > tt)
-        if (getvec(sbuf + nisig * ((++tt)&(BUFLN-1))) < 0) {
-	    --tt;
-	    sample_vflag = 0;
-	    return (*(sbuf + nisig * (tt&(BUFLN-1)) + s));
-	}*/
+    
 
     /* The requested sample is in the buffer.  Set sample_vflag and
        return the requested sample. */
-    if ((v = *(sbuf + nisig * (t&(BUFLN-1)) /*+ s*/)) == WFDB_INVALID_SAMPLE)
+    if ((v = *(sbuf + nisig * (t&(lonbuf-1)) /*+ s*/)) == WFDB_INVALID_SAMPLE)
         sample_vflag = -1;
     else
         sample_vflag = 1;
@@ -474,6 +516,22 @@ static int8_t readheader()
 		s++; //porq se supone que sale del for con este valor	
     return (s);			/* return number of available signals */
 }
+//valores que se meten en siarray
+	/*siarray[0].fname="100.dat";
+    siarray[0].desc="MLII";
+    siarray[0].units=NULL;
+    siarray[0].gain=0;
+    siarray[0].initval=995;
+    siarray[0].group=0;
+    siarray[0].fmt=212;
+    siarray[0].spf=1;
+    siarray[0].bsize=0;
+    siarray[0].adcres=11;
+    siarray[0].adczero=1024;
+    siarray[0].baseline=1024;
+    siarray[0].nsamp=65000;
+    siarray[0].cksum=-22131;
+    return (1);*/
 
 //-----------------------------------------------isigopen--------------------------------------------------
 
@@ -581,45 +639,7 @@ int8_t isigopen(WFDB_Siginfo *siarray, int8_t nsig){
 
 
 
-//----------------------------------------------- setifreq -------------------------------------------------
 
-//sets the current input sampling frequency
-int8_t setifreq(WFDB_Frequency f){
-	if (f > 0.0) {
-		WFDB_Frequency error, g = sfreq;
-	
-		
-		ifreq = f;
-		/* The 0.005 below is the maximum tolerable error in the resampling
-		   frequency (in Hz).  The code in the while loop implements Euclid's
-		   algorithm for finding the greatest common divisor of two integers,
-		   but in this case the integers are (implicit) multiples of 0.005. */
-		while ((error = f - g) > 0.005 || error < -0.005)
-		    if (f > g) f -= g;
-		    else g -= f;
-		/* f is now the GCD of sfreq and ifreq in the sense described above.
-		   We divide each raw sampling interval into mticks subintervals. */
-	        mticks = (long)(sfreq/f + 0.5);
-		/* We divide each resampled interval into nticks subintervals. */
-			nticks = (long)(ifreq/f + 0.5);
-		/* Raw and resampled intervals begin simultaneously once every mnticks
-		   subintervals; we say an epoch begins at these times. */
-			mnticks = mticks * nticks;
-		/* gvtime is the number of subintervals from the beginning of the
-		   current epoch to the next sample to be returned by getvec(). */
-		gvtime = 0;
-		/* rgvtime is the number of subintervals from the beginning of the
-		 current epoch to the most recent sample returned by rgetvec(). */
-		rgvtime = nticks;
-		return (0);
-    }
-    else {
-		ifreq = 0.0;
-		//wfdb_error("setifreq: improper frequency %g (must be > 0)\n", f);
-		return (-1);
-    }
-	
-}
 
 //-------------------------------------------muvadu----------------------------------------------------
 //his function converts the potential difference v from microvolts to ADC units, 
@@ -640,38 +660,6 @@ WFDB_Sample muvadu(/*WFDB_Signal s,*/ int8_t v){
 
 }
 
-//----------------------------------------------- wfdbinit -------------------------------------------------
-
-//http://physionet.org/physiotools/wpg/wpg_19.htm#SEC62
-//char *record, /*WFDB_Anninfo *aiarray, uint8_t nann,*/ WFDB_Siginfo *siarray, uint8_t nsig
-int8_t wfdbinit( WFDB_Siginfo *siarray,uint8_t nsig){
-	           
-	/*int stat;
-    if ((stat = annopen(record, aiarray, nann)) == 0) //open annotation files for the specified record 
-	stat = isigopen(record, siarray, (int)nsig);
-    return (stat);
-	  */    
-	  int8_t stat;
-	stat = isigopen(siarray, (int8_t)nsig);
-    return (stat);     
-	//valores que se meten en siarray
-	/*siarray[0].fname="100.dat";
-    siarray[0].desc="MLII";
-    siarray[0].units=NULL;
-    siarray[0].gain=0;
-    siarray[0].initval=995;
-    siarray[0].group=0;
-    siarray[0].fmt=212;
-    siarray[0].spf=1;
-    siarray[0].bsize=0;
-    siarray[0].adcres=11;
-    siarray[0].adczero=1024;
-    siarray[0].baseline=1024;
-    siarray[0].nsamp=65000;
-    siarray[0].cksum=-22131;
-    return (1);*/
-	           	           
-}	
 
 
 
