@@ -14,7 +14,8 @@ typedef double	     WFDB_Frequency;/* units are Hz (samples/second/signal) */
 //typedef int16_t	     WFDB_Date;	    /* units are days */
 
 //#define BUFLN   4096	/* must be a power of 2, see sample() */
-#define BUFLN  16384	/* must be a power of 2, see ltsamp() */
+#define BUFLN  164//16384	/* must be a power of 2, see ltsamp() */
+#define lonbuf 164
 
 
 //Estructuras
