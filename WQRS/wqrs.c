@@ -157,55 +157,24 @@ main(int8_t argc, char **argv)
 { 
     
     float sps;			     /* sampling frequency, in Hz (SR) */
-    //float samplingInterval;          /* sampling interval, in milliseconds */
     int8_t i, max, min, onset, timer;
-    
-    //int8_t Rflag = 0;		     /* if non-zero, resample at 120 or 150 Hz  */
-    
+     
     int8_t EyeClosing;                  /* eye-closing period, related to SR */
     int8_t ExpectPeriod;                /* if no QRS is detected over this period,
 					the threshold is automatically reduced
 					to a minimum value;  the threshold is
 					restored upon a detection */
     double Ta, T0;			     /* high and low detection thresholds */
-   
     WFDB_Gain gain;
-    //WFDB_Sample *v;
-    WFDB_Siginfo s;
     WFDB_Time  t, tpq, tt, t1,from = 0L, to = 0L;
-    //static int8_t gvmode = 0; //esta se usa para la opcion H pero me creo q tb se usa en otras cosas
-    //char *prog_name();
-    
-   
-   
-
-    //pname = prog_name(argv[0]);
-    
-    //quito las opciones del principio porque siempre vamos a tener lo mismo y ya no hay record
-    //  ./wqrs -r 100 -p 100 -R
 
     PWFreq=100;  //opcion -p
-    //Rflag = 1;   //opcion -R
-    
-    
-
    
-    setgvmode(0|WFDB_GVPAD);
-	//nota: isigopen(char *record, WFDB_Siginfo *siarray, int8_t nsig)
-    if (( isigopen(/*record,*/ NULL, 0)) < 1) exit(2); //nsig=1 luego aqui no hace nada porq el segundo parametro es null
-  
-    
-   /* if ((s = (WFDB_Siginfo *)malloc(nsig * sizeof(WFDB_Siginfo))) == NULL) {
-		
-		exit(2);
-    }*/
-    //a.name = "wqrs"; a.stat = WFDB_WRITE;
-    if (( isigopen(/*record,*/ /*&a, 1, */&s, 1)) < 1) exit(2); //aqui rellena la estructura s -->solucionado!!!
-    
-    
-    
-    //sig=0;//analizamos una sola señal
-    if ((gain = s.gain) == 0.0) gain = WFDB_DEFGAIN;
+    sfreq = ffreq;//setgvmode(0|WFDB_GVPAD);
+	
+    if ( readheader() < 1) exit(2); //inicializa algunas variables
+
+    if ((gain = infogain) == 0.0) gain = WFDB_DEFGAIN;
     sps = sfreq; //sampfreq((char *)NULL); no hace falta usar este metodo, ya he comprobado que es 0
     
     ifreq=150.;
@@ -213,12 +182,9 @@ main(int8_t argc, char **argv)
    
      to = strtim("e");//siempre hace else ya que to=0L, va a dar to=nsambles=65000
 
-   
-    Tm = muvadu(/*sig,*/ Tm);
-    //samplingInterval = 1000.0/sps;
+    Tm = muvadu(Tm);
     lfsc = 1.25*gain*gain/sps;	/* length function scale constant */
-   
-    
+
     LPn = sps/PWFreq;   /* The LP filter will have a notch at the
 				    power line (mains) frequency */
     if (LPn > 8)  LPn = 8;	/* avoid filtering too agressively */
@@ -228,10 +194,7 @@ main(int8_t argc, char **argv)
     LTwindow = sps * MaxQRSw;     /* length transform window size */
 
     (void)sample(/*sig,*/ 0L);
-    
-    
-    
-    
+
     /* Average the first 8 seconds of the length-transformed samples
        to determine the initial thresholds Ta and T0. The number of samples
        in the average is limited to half of the ltsamp buffer if the sampling
@@ -239,13 +202,13 @@ main(int8_t argc, char **argv)
     if ((t1 = strtim("8")) > BUFLN*0.9)
 	t1 = BUFLN/2;
     t1 += from;
-    for (T0 = 0, t = from; t < t1 && sample_valid(); t++)
+    for (T0 = 0, t = from; t < t1 && sample_vflag; t++)
 		T0 += ltsamp(t);
     T0 /= t1 - from;
     Ta = 3 * T0;
 
     /******************************** Main loop *******************************/
-    for (t = from; t < to || (to == 0L && sample_valid()); t++) {
+    for (t = from; t < to || (to == 0L && sample_vflag); t++) {
 		static int8_t learning = 1, T1;
 	
 		if (learning) {
@@ -256,7 +219,6 @@ main(int8_t argc, char **argv)
 	    	}
 	    	else  T1 = 2*T0;
 		}
-	
 	/* Compare a length-transformed sample against T1. */
 		if (ltsamp(t) > T1) {	/* found a possible QRS near t */
 		    timer = 0; /* used for counting the time after previous QRS */
@@ -282,23 +244,19 @@ main(int8_t argc, char **argv)
 				if (!learning) {
 				    /* Check that we haven't reached the end of the record. */
 				    (void)sample(/*sig,*/ tpq);
-				    if (sample_valid() == 0) break;
+				    if (sample_vflag == 0) break;
 				    /* Record an annotation at the QRS onset */
-				   
-				    
-				    
+
 				    /********************************************************
 				    	aqui es donde tenemos que imprimir el tpq (annot.time)!!!
 				    ********************************************************/
-				 
-				    
+
 				 }
 	
 				/* Adjust thresholds */
 				Ta += (max - Ta)/10;
 				T1 = Ta / 3;
-		
-		
+
 				/* Lock out further detections during the eye-closing period */
 				t += EyeClosing;
 		    }
@@ -314,30 +272,9 @@ main(int8_t argc, char **argv)
 	
 		
     }
-
     (void)free(lbuf);
     (void)free(ebuf);
     
     exit(0);
 }
-
-/*char *prog_name(s)
-char *s;
-{
-    char *p = s + strlen(s);
-
-	#ifdef MSDOS
-	    while (p >= s && *p != '\\' && *p != ':') {
-		if (*p == '.')
-		    *p = '\0';		// strip off extension 
-		if ('A' <= *p && *p <= 'Z')
-		    *p += 'a' - 'A';	// convert to lower case 
-		p--;
-	    }
-	#else
-	    while (p >= s && *p != '/')
-		p--;
-	#endif
-	    return (p+1);
-}*/
 

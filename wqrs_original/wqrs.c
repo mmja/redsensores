@@ -258,7 +258,7 @@ main(int argc, char **argv)
 	gvmode = atoi(p);
 	
     setgvmode(gvmode|WFDB_GVPAD);
-    
+    printf("%d\n",nsig);
 	
     if ((nsig = isigopen(record, NULL, 0)) < 1) exit(2);
    
@@ -267,10 +267,13 @@ main(int argc, char **argv)
 	exit(2);
     }
     a.name = "wqrs"; a.stat = WFDB_WRITE;
+    printf("%d\n",nsig);
     if ((nsig = wfdbinit(record, &a, 1, s, nsig)) < 1) exit(2);
-   
+    
+    printf("%d\n",nsig);
     if (sig < 0 || sig >= nsig) sig = 0;
     if ((gain = s[sig].gain) == 0.0) gain = WFDB_DEFGAIN;
+    
     sps = sampfreq((char *)NULL);
  
     if (Rflag) {
@@ -456,7 +459,7 @@ main(int argc, char **argv)
 	printf("\n\nDone! \n\nResulting annotation file:  %s.wqrs\n\n\n",
 	       record);
     }
-    printf("%d\n",sig);
+  
     exit(0);
 }
 
