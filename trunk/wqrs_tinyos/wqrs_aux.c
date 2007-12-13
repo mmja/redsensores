@@ -47,7 +47,7 @@ int16_t sample( WFDB_Time t, int16_t *sbuf ){
 int16_t muvadu( int8_t v){
 	
     int32_t x;
-    WFDB_Gain g = infogain;
+    WFDB_Gain g = WFDB_DEFGAIN;
 
     if (g == 0.) g = WFDB_DEFGAIN;
     x = g*v*0.001;
@@ -58,29 +58,7 @@ int16_t muvadu( int8_t v){
 
 }
 
-//-----------------------------------------------strtim--------------------------------------------------
-//http://physionet.org/physiotools/wpg/wpg_23.htm#SEC85
-WFDB_Time strtim(char *string){
-	
-    double f, x, y, z;
-   
-    WFDB_Time t;
 
-    if (ifreq > 0.) f = ifreq;
-    else if (sfreq > 0.) f = sfreq;
-    else f = 1.0;
-    while (*string==' ' || *string=='\t' || *string=='\n' || *string=='\r')
-	string++;
-    switch (*string) {
-    case 'e':	return  nsamples ;  
-      default:  
-		//x = atof(string); entra un "8", entero, y los atoi si los coge
-		x=atoi(string);
-	   return ((int16_t)(x*f + 0.5));
-	
-    }	
-	
-}
 
 
 
