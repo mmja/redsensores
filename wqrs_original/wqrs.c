@@ -102,7 +102,7 @@ WFDB_Sample ltsamp(WFDB_Time t)
     int dy;
     static int Yn, Yn1, Yn2;
     static WFDB_Time tt = (WFDB_Time)-1L;
-
+	
     if (lbuf == NULL) {
 	lbuf = (WFDB_Sample *)malloc((unsigned)BUFLN*sizeof(WFDB_Sample));
 	ebuf = (int *)malloc((unsigned)BUFLN * sizeof(int));
@@ -258,7 +258,7 @@ main(int argc, char **argv)
 	gvmode = atoi(p);
 	
     setgvmode(gvmode|WFDB_GVPAD);
-    printf("%d\n",nsig);
+  
 	
     if ((nsig = isigopen(record, NULL, 0)) < 1) exit(2);
    
@@ -267,10 +267,10 @@ main(int argc, char **argv)
 	exit(2);
     }
     a.name = "wqrs"; a.stat = WFDB_WRITE;
-    printf("%d\n",nsig);
+    
     if ((nsig = wfdbinit(record, &a, 1, s, nsig)) < 1) exit(2);
     
-    printf("%d\n",nsig);
+   
     if (sig < 0 || sig >= nsig) sig = 0;
     if ((gain = s[sig].gain) == 0.0) gain = WFDB_DEFGAIN;
     
@@ -280,6 +280,7 @@ main(int argc, char **argv)
     	if (PWFreq == 60.0) setifreq(sps = 120.);
     	else setifreq(sps = 150.);
     }
+   
     if (from > 0L) {
 	if ((from = strtim(argv[from])) < 0L)
 	from = -from;
@@ -301,13 +302,16 @@ main(int argc, char **argv)
     samplingInterval = 1000.0/sps;
     
     lfsc = 1.25*gain*gain/sps;	/* length function scale constant */
+    
     spm = 60 * sps;
     next_minute = from + spm;
     LPn = sps/PWFreq;   /* The LP filter will have a notch at the
 				    power line (mains) frequency */
     if (LPn > 8)  LPn = 8;	/* avoid filtering too agressively */
     LP2n = 2 * LPn;
+    
     EyeClosing = sps * EYE_CLS;   /* set eye-closing period */
+    
     ExpectPeriod = sps * NDP;	   /* maximum expected RR interval */
     LTwindow = sps * MaxQRSw;     /* length transform window size */
 
