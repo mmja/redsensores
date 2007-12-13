@@ -7,9 +7,9 @@
 //#define LPERIOD 1000	/* learning period is the first LPERIOD samples */
 #define MaxQRSw 0.13    /* maximum QRS width (130ms) */                        
 #define NDP	 2.5    /* adjust threshold if no QRS found in NDP seconds */
-#define PWFreqDEF 60    /* power line (mains) frequency, in Hz (default) */
 #define TmDEF	 100	/* minimum threshold value (default) */
-
+#define sps 150.		/* sampling frequency, in Hz (SR) */
+#define  PWFreq 100  //opcion -p
 
 //char *pname;		/* the name by which this program was invoked */
 int32_t lfsc;		/* length function scale constant */
@@ -17,10 +17,17 @@ int8_t *ebuf;
 //int8_t nsig;		/* number of input signals */
 int8_t LPn, LP2n;          /* filter parameters (dependent on sampling rate) */
 int8_t LTwindow;           /* LT window size */
-int8_t PWFreq = PWFreqDEF;	/* power line (mains) frequency, in Hz */
 //int8_t sig = 0;	        /* signal number of signal to be analyzed */
 int8_t Tm = TmDEF;		/* minimum threshold value */
 int16_t *lbuf = NULL;
+int16_t count;
+double Ta, T0;			     /* high and low detection thresholds */
+WFDB_Time  t1;	
+int8_t EyeClosing;                  /* eye-closing period, related to SR */
+int8_t ExpectPeriod;                /* if no QRS is detected over this period,
+					the threshold is automatically reduced
+					to a minimum value;  the threshold is
+					restored upon a detection */		
 
 
 /* ltsamp() returns a sample of the length transform of the input at time t.
@@ -72,74 +79,53 @@ WFDB_Sample ltsamp(WFDB_Time t,int16_t *buffer)
     return (lbuf[t&(BUFLN-1)]);
 }
 
-int8_t wqrs(int16_t datum, int16_t *buffer)
-{ 
-    float sps;			     /* sampling frequency, in Hz (SR) */
-    int8_t i, max, min, onset, timer;
-     
-    int8_t EyeClosing;                  /* eye-closing period, related to SR */
-    int8_t ExpectPeriod;                /* if no QRS is detected over this period,
-					the threshold is automatically reduced
-					to a minimum value;  the threshold is
-					restored upon a detection */
-    double Ta, T0;			     /* high and low detection thresholds */
-    WFDB_Gain gain;
-    WFDB_Time  t, tpq, tt, t1,from = 0L, to = 0L;
-
-    PWFreq=100;  //opcion -p
-   
-    //sfreq = ffreq;//setgvmode(0|WFDB_GVPAD);
+int8_t init(int16_t *buffer){
 	
-    //if ( readheader() < 1) exit(2); //inicializa algunas variables
-    
-    //ffreq=(WFDB_Frequency)360; 
-    //sfreq = ffreq;
-    sfreq=(WFDB_Frequency)360; 
-    nsamples=650000;
-	infogain=(WFDB_Gain)200;  
-
-    if ((gain = infogain) == 0.0) gain = WFDB_DEFGAIN;
-    sps = sfreq; //sampfreq((char *)NULL); no hace falta usar este metodo, ya he comprobado que es 0
-    
-    ifreq=150.;
-    sps=150.;
-   
-     to = strtim("e");//siempre hace else ya que to=0L, va a dar to=nsambles=65000
-
-    Tm = muvadu(Tm);
-    lfsc = 1.25*gain*gain/sps;	/* length function scale constant */
-
-    LPn = sps/PWFreq;   /* The LP filter will have a notch at the
-				    power line (mains) frequency */
-    if (LPn > 8)  LPn = 8;	/* avoid filtering too agressively */
-    LP2n = 2 * LPn;
-    EyeClosing = sps * EYE_CLS;   /* set eye-closing period */
-    ExpectPeriod = sps * NDP;	   /* maximum expected RR interval */
+	Tm = muvadu(Tm);
     LTwindow = sps * MaxQRSw;     /* length transform window size */
+	
+	EyeClosing = sps * EYE_CLS;   /* set eye-closing period */
+    ExpectPeriod = sps * NDP;	   /* maximum expected RR interval */
+	
+	lfsc = 1.25*WFDB_DEFGAIN*WFDB_DEFGAIN/sps;	/* length function scale constant */
 
-    (void)sample(/*sig,*/ 0L,buffer);
-
-    /* Average the first 8 seconds of the length-transformed samples
+	LPn = sps/PWFreq;   /* The LP filter will have a notch at the
+				    power line (mains) frequency */
+    LP2n = 2 * LPn;
+	
+	/* Average the first 8 seconds of the length-transformed samples
        to determine the initial thresholds Ta and T0. The number of samples
        in the average is limited to half of the ltsamp buffer if the sampling
        frequency exceeds about 2 KHz. */
-    if ((t1 = strtim("8")) > BUFLN*0.9)
-	t1 = BUFLN/2;
-    t1 += from;
-    for (T0 = 0, t = from; t < t1 && sample_vflag; t++)
+    //(void)sample(/*sig,*/ 0L,buffer);
+	t1 = (int16_t)(8*ifreq + 0.5); 
+	for (T0 = 0, t = 0; t < BUFLN /*&& sample_vflag*/; t++)
 		T0 += ltsamp(t,buffer);
-    T0 /= t1 - from;
+    T0 /= BUFLN;
     Ta = 3 * T0;
+    count=40;
+}
+int8_t wqrs(int16_t datum, int16_t *buffer,int8_t from)
+{ 
+	     
+    int8_t i, max, min, onset, timer;
 
+    WFDB_Time  t, tpq, tt;
+    int8_t to;
+    
+
+    // to = strtim("e");//siempre hace else ya que to=0L, va a dar to=nsambles=65000
+    to=(from+BUFLN-1)&(BUFLN-1);
+    
     /******************************** Main loop *******************************/
-    for (t = from; t < to || (to == 0L && sample_vflag); t++) {
+    //for (t = 0; t < to || (to == 0L && sample_vflag); t++) {
 		static int8_t learning = 1, T1;
 	
 		if (learning) {
 		    if (t > t1) {
 				learning = 0;
 				T1 = T0;
-				t = from;	/* start over */
+				t = 0;	/* start over */
 	    	}
 	    	else  T1 = 2*T0;
 		}
@@ -193,10 +179,20 @@ int8_t wqrs(int16_t datum, int16_t *buffer)
 				T0 = Ta / 3;
 		    }      
 		}
-    }
-    (void)free(lbuf);
+    //}
+      //metemos el nuevo valor datum al buffer en la posicion to (se pierde el primer dato 
+   
+    
+   
+}
+void freeBuffers(){
+	
+	(void)free(lbuf);
     (void)free(ebuf);
     
-    exit(0);
+ 
+	
 }
+
+
 
