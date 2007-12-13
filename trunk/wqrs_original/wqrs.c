@@ -171,6 +171,7 @@ main(int argc, char **argv)
 
     pname = prog_name(argv[0]);
 
+   
     for (i = 1; i < argc; i++) {
 	if (*argv[i] == '-') switch (*(argv[i]+1)) {
 	  case 'd':	/* dump filter data */
