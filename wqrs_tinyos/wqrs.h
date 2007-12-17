@@ -18,8 +18,10 @@ static int8_t sample_vflag;	/* if non-zero, last value returned by sample() was 
 # include <strings.h>
 #endif
 //variables y metodos externos
-int16_t sample( WFDB_Time t, int16_t *sbuf ){
+int16_t getsample( WFDB_Time dat, int16_t *sbuf );
 int16_t muvadu(/*WFDB_Signal s,*/ int8_t v);
-int16_t ltsamp(WFDB_Time t);
+int16_t ltsamp(WFDB_Time current,int16_t *buffer);
+int32_t wqrs(int16_t datum, int16_t *buffer);
+
 
 

@@ -63,6 +63,7 @@ implementation {
 		//y saldremos de este método.
 		
 		sample_t sample;
+		int32_t resultado;
 		
 		//Declaración de las demás variables que necesitamos
 		
