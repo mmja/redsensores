@@ -21,13 +21,16 @@ int8_t LTwindow;           /* LT window size */
 int8_t Tm = TmDEF;		/* minimum threshold value */
 int16_t *lbuf = NULL;
 int16_t count;
-double Ta, T0;			     /* high and low detection thresholds */
+double Ta, T0=0;			     /* high and low detection thresholds */
+int8_t T1;
 WFDB_Time  t1;	
 int8_t EyeClosing;                  /* eye-closing period, related to SR */
 int8_t ExpectPeriod;                /* if no QRS is detected over this period,
 					the threshold is automatically reduced
 					to a minimum value;  the threshold is
-					restored upon a detection */		
+					restored upon a detection */
+int8_t timeInit;  //1200 datos en 8 segundos 
+int8_t from;		
 
 
 /* ltsamp() returns a sample of the length transform of the input at time t.
@@ -37,7 +40,7 @@ int8_t ExpectPeriod;                /* if no QRS is detected over this period,
    'sig'.  The caller must never "rewind" by more than BUFLN samples (the
    length of ltsamp()'s buffers). */
 
-WFDB_Sample ltsamp(WFDB_Time t,int16_t *buffer)
+int16_t ltsamp(WFDB_Time t,int16_t *buffer)
 {
     int8_t dy;
     static int8_t Yn, Yn1, Yn2;
@@ -79,9 +82,17 @@ WFDB_Sample ltsamp(WFDB_Time t,int16_t *buffer)
     return (lbuf[t&(BUFLN-1)]);
 }
 
-int8_t init(int16_t *buffer){
-	
-	Tm = muvadu(Tm);
+
+int8_t wqrs(int16_t datum, int16_t *buffer)
+{ 
+	     
+    int8_t i, max, min, onset, timer;
+
+    WFDB_Time  t, tpq, tt;
+    int8_t to;
+    
+    
+    Tm = muvadu(Tm);
     LTwindow = sps * MaxQRSw;     /* length transform window size */
 	
 	EyeClosing = sps * EYE_CLS;   /* set eye-closing period */
@@ -92,43 +103,50 @@ int8_t init(int16_t *buffer){
 	LPn = sps/PWFreq;   /* The LP filter will have a notch at the
 				    power line (mains) frequency */
     LP2n = 2 * LPn;
+	t1 = (int16_t)(8*ifreq + 0.5);
+    
+	//metemos el nuevo valor datum al buffer en la posicion to (se pierde el primer dato 
+	buffer[count&(BUFLN-1)]=datum;
+	count++;
 	
-	/* Average the first 8 seconds of the length-transformed samples
+    // to = strtim("e");//siempre hace else ya que to=0L, va a dar to=nsambles=65000
+    if(timeInit){
+	    /* Average the first 8 seconds of the length-transformed samples
        to determine the initial thresholds Ta and T0. The number of samples
        in the average is limited to half of the ltsamp buffer if the sampling
        frequency exceeds about 2 KHz. */
-    //(void)sample(/*sig,*/ 0L,buffer);
-	t1 = (int16_t)(8*ifreq + 0.5); 
-	for (T0 = 0, t = 0; t < BUFLN /*&& sample_vflag*/; t++)
-		T0 += ltsamp(t,buffer);
-    T0 /= BUFLN;
-    Ta = 3 * T0;
-    count=40;
-}
-int8_t wqrs(int16_t datum, int16_t *buffer,int8_t from)
-{ 
-	     
-    int8_t i, max, min, onset, timer;
-
-    WFDB_Time  t, tpq, tt;
-    int8_t to;
+	    //(void)sample(/*sig,*/ 0L,buffer);
+		T0 += ltsamp(count-1,buffer);
+	    if(count==t1){ 
+		    timeInit=0;
+	    	T0 /= t1;
+	    	Ta = 3 * T0;	
+	    	T1=T0;
+        }
+    }
+    if(count>BUFLN){
+	     from=(from+1)&(BUFLN-1);
+	     to=(from+BUFLN-1)&(BUFLN-1);
+    }else{ 
+	    to=(from+count-1)&(BUFLN-1);
+    }
     
+   
 
-    // to = strtim("e");//siempre hace else ya que to=0L, va a dar to=nsambles=65000
-    to=(from+BUFLN-1)&(BUFLN-1);
-    
+    if(count>=t1) ){  //cuando el buffer tiene mas de valores
+    	t=(count-1-(EyeClosing/2))&(BUFLN-1);
     /******************************** Main loop *******************************/
     //for (t = 0; t < to || (to == 0L && sample_vflag); t++) {
-		static int8_t learning = 1, T1;
+		
 	
-		if (learning) {
+		/*if (learning) {
 		    if (t > t1) {
 				learning = 0;
 				T1 = T0;
-				t = 0;	/* start over */
+				t = 0;	// start over 
 	    	}
 	    	else  T1 = 2*T0;
-		}
+		}*/
 	/* Compare a length-transformed sample against T1. */
 		if (ltsamp(t,buffer) > T1) {	/* found a possible QRS near t */
 		    timer = 0; /* used for counting the time after previous QRS */
@@ -151,36 +169,38 @@ int8_t wqrs(int16_t datum, int16_t *buffer,int8_t from)
 				    }
 				}
 	
-				if (!learning) {
+				
 				    /* Check that we haven't reached the end of the record. */
-				    (void)sample(/*sig,*/ tpq,buffer);
-				    if (sample_vflag == 0) break;
-				    /* Record an annotation at the QRS onset */
+				(void)sample(/*sig,*/ tpq,buffer);
+				if (sample_vflag == 1) return tpq;
+				    
 
 				    /********************************************************
 				    	aqui es donde tenemos que imprimir el tpq (annot.time)!!!
 				    ********************************************************/
                     
-				 }
+				 
 	
 				/* Adjust thresholds */
 				Ta += (max - Ta)/10;
 				T1 = Ta / 3;
 
 				/* Lock out further detections during the eye-closing period */
-				t += EyeClosing;
+				//t += EyeClosing;  //????????
 		    }
 		}
-		else if (!learning) {
+		else 
 		    /* Once past the learning period, decrease threshold if no QRS
 		       was detected recently. */
 		    if (++timer > ExpectPeriod && Ta > Tm) {
 				Ta--;
 				T0 = Ta / 3;
-		    }      
+		          
 		}
     //}
-      //metemos el nuevo valor datum al buffer en la posicion to (se pierde el primer dato 
+	}
+	return 0;
+      
    
     
    
