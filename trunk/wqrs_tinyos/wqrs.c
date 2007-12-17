@@ -40,19 +40,19 @@ int8_t from;
    'sig'.  The caller must never "rewind" by more than BUFLN samples (the
    length of ltsamp()'s buffers). */
 
-int16_t ltsamp(WFDB_Time t,int16_t *buffer)
+int16_t ltsamp(WFDB_Time current,int16_t *buffer)
 {
     int8_t dy;
     static int8_t Yn, Yn1, Yn2;
     static WFDB_Time tt = (WFDB_Time)-1L;
 
     if (lbuf == NULL) {
-		lbuf = (WFDB_Sample *)malloc((unsigned)BUFLN*sizeof(WFDB_Sample));
+		lbuf = (int16_t *)malloc((unsigned)BUFLN*sizeof(int16_t));
 		ebuf = (int8_t *)malloc(BUFLN * sizeof(int8_t));
 		if (lbuf && ebuf) {
 		    for (ebuf[0] = sqrtf(lfsc), tt = 1L; tt < BUFLN; tt++)
 				ebuf[tt] = ebuf[0];
-		    if (t > BUFLN) tt = (WFDB_Time)(t - BUFLN);
+		    if (current > BUFLN) tt = (WFDB_Time)(current - BUFLN);
 		    else tt = (WFDB_Time)-1L;
 		    Yn = Yn1 = Yn2 = 0;
 		}
@@ -60,18 +60,18 @@ int16_t ltsamp(WFDB_Time t,int16_t *buffer)
 		    exit(2);
 		}
     }
-    if (t < tt - BUFLN) {
+    if (current < tt - BUFLN) {
 		exit(2);
     }
-    while (t > tt) {
+    while (current > tt) {
 		static int8_t aet = 0, et;
-		WFDB_Sample v0, v1, v2;
+		int16_t v0, v1, v2;
 	
 		Yn2 = Yn1;
 		Yn1 = Yn;
-		if ((v0 = sample(/*sig,*/ tt,buffer)) != WFDB_INVALID_SAMPLE &&
-		    (v1 = sample(/*sig,*/ tt-LPn,buffer)) != WFDB_INVALID_SAMPLE &&
-		    (v2 = sample(/*sig,*/ tt-LP2n,buffer)) != WFDB_INVALID_SAMPLE)
+		if ((v0 = getsample(/*sig,*/ tt,buffer)) != WFDB_INVALID_SAMPLE &&
+		    (v1 = getsample(/*sig,*/ tt-LPn,buffer)) != WFDB_INVALID_SAMPLE &&
+		    (v2 = getsample(/*sig,*/ tt-LP2n,buffer)) != WFDB_INVALID_SAMPLE)
 		    Yn = 2*Yn1 - Yn2 + v0 - 2*v1 + v2;
 		dy = (Yn - Yn1) / LP2n;		/* lowpass derivative of input */
 		et = ebuf[(++tt)&(BUFLN-1)] = sqrtf(lfsc +dy*dy); /* length transform */
@@ -79,11 +79,11 @@ int16_t ltsamp(WFDB_Time t,int16_t *buffer)
 		/* lbuf contains the average of the length-transformed samples over
 		   the interval from tt-LTwindow+1 to tt */
     }
-    return (lbuf[t&(BUFLN-1)]);
+    return (lbuf[current&(BUFLN-1)]);
 }
 
 
-int8_t wqrs(int16_t datum, int16_t *buffer)
+int32_t wqrs(int16_t datum, int16_t *buffer)
 { 
 	     
     int8_t i, max, min, onset, timer;
@@ -115,7 +115,7 @@ int8_t wqrs(int16_t datum, int16_t *buffer)
        to determine the initial thresholds Ta and T0. The number of samples
        in the average is limited to half of the ltsamp buffer if the sampling
        frequency exceeds about 2 KHz. */
-	    //(void)sample(/*sig,*/ 0L,buffer);
+	    //(void)getsample(/*sig,*/ 0L,buffer);
 		T0 += ltsamp(count-1,buffer);
 	    if(count==t1){ 
 		    timeInit=0;
@@ -133,7 +133,7 @@ int8_t wqrs(int16_t datum, int16_t *buffer)
     
    
 
-    if(count>=t1) ){  //cuando el buffer tiene mas de valores
+    if(count>=t1){  //cuando el buffer tiene mas de valores
     	t=(count-1-(EyeClosing/2))&(BUFLN-1);
     /******************************** Main loop *******************************/
     //for (t = 0; t < to || (to == 0L && sample_vflag); t++) {
@@ -171,7 +171,7 @@ int8_t wqrs(int16_t datum, int16_t *buffer)
 	
 				
 				    /* Check that we haven't reached the end of the record. */
-				(void)sample(/*sig,*/ tpq,buffer);
+				(void)getsample(/*sig,*/ tpq,buffer);
 				if (sample_vflag == 1) return tpq;
 				    
 
@@ -196,14 +196,12 @@ int8_t wqrs(int16_t datum, int16_t *buffer)
 				Ta--;
 				T0 = Ta / 3;
 		          
-		}
+			}
     //}
 	}
-	return 0;
-      
-   
-    
-   
+	
+	return (0);
+
 }
 void freeBuffers(){
 	

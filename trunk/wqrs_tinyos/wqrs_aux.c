@@ -7,17 +7,17 @@
 //#define BUFLN   4096	/* must be a power of 2, see sample() */
 //********************************************* SAMPLE  ***************************************
 //consultar funciones http://physionet.org/physiotools/wpg/wpg_toc.htm
-//This function return the value (in raw adus) of sample number t in open signal s,
+//This function return the value (in raw adus) of sample number current in open signal s,
 //if successful, or the value of the previous successfully read sample.
-int16_t sample( WFDB_Time t, int16_t *sbuf ){
+int16_t getsample( WFDB_Time dat, int16_t *sbuf ){
  	static int16_t v;
     /* If the caller specified a negative sample number, prepare to return
        sample 0.  This behavior differs from the convention that only the
        absolute value of the sample number matters. */
-    if (t < 0L) t = 0L;
+    if (dat < 0L) dat = 0L;
     /* The requested sample is in the buffer.  Set sample_vflag and
        return the requested sample. */
-    if ((v = *(sbuf +  (t&(BUFLN-1)) /*+ s*/)) == WFDB_INVALID_SAMPLE)
+    if ((v = *(sbuf +  (dat&(BUFLN-1)) /*+ s*/)) == WFDB_INVALID_SAMPLE)
         sample_vflag = -1;
     else
         sample_vflag = 1;
