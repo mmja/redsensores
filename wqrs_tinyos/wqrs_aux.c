@@ -17,7 +17,7 @@ int16_t getsample( WFDB_Time dat, int16_t *sbuf ){
     if (dat < 0L) dat = 0L;
     /* The requested sample is in the buffer.  Set sample_vflag and
        return the requested sample. */
-    if ((v = *(sbuf +  (dat&(BUFLN-1)) /*+ s*/)) == WFDB_INVALID_SAMPLE)
+    if ((v = (sbuf [dat%(BUFLN)] /*+ s*/)) == WFDB_INVALID_SAMPLE)
         sample_vflag = -1;
     else
         sample_vflag = 1;
