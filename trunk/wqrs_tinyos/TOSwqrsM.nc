@@ -67,7 +67,7 @@ implementation {
 		
 		//Declaración de las demás variables que necesitamos
 		
-		dbg(DBG_USR1, "Timer disparado\n");
+		//dbg(DBG_USR1, "Timer disparado\n");
 		
 		sample = get_sample_from_core();//Con esta llamada, tenemos en la variable "sample" la muestra que acabamos de leer
 		
@@ -75,9 +75,9 @@ implementation {
 		//se almacena en la variable "resultado":
 		resultado = wqrs(sample,buffer);
 		
-		if(resultado!=0){
-		   dbg(resultado, "QRS detectado en:\n");
-		}
+		//if(resultado!=0){
+		   dbg(DBG_USR1, "QRS detectado en:\%d   \%d\n",sample, resultado);
+		//}
 		//Ahora evaluamos el resultado y en función de lo que hayamos obtenido mandaremos un paquete, o no haremos nada, etc.
 		
 		return SUCCESS;
@@ -96,7 +96,7 @@ implementation {
 	  	//datapck.s_addr = (datapck.s_addr + (0xAA<<8));
 	  	datapck.type = 0x0C;
 	  	datapck.group = 0x35;
-	  	datapck.length = 18;
+	  	datapck.length = 18;	 
 	  	//datapck.seqNo = 0x00;
 	  	datapck.crc = 1;
 	  	
