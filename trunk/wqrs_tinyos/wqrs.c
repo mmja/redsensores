@@ -25,7 +25,7 @@ double Ta, T0=0;			     /* high and low detection thresholds */
 int8_t T1;
 WFDB_Time  t1;	
 int8_t EyeClosing;                  /* eye-closing period, related to SR */
-int8_t ExpectPeriod;                /* if no QRS is detected over this period,
+int16_t ExpectPeriod;                /* if no QRS is detected over this period,
 					the threshold is automatically reduced
 					to a minimum value;  the threshold is
 					restored upon a detection */
@@ -86,7 +86,7 @@ int16_t ltsamp(WFDB_Time current,int16_t *buffer)
 int32_t wqrs(int16_t datum, int16_t *buffer)
 { 
 	     
-    int8_t i, max, min, onset, timer;
+    int8_t max, min, onset, timer;
 
     WFDB_Time  t, tpq, tt;
     int8_t to;
