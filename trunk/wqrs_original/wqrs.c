@@ -350,8 +350,11 @@ main(int argc, char **argv)
     if ((t1 = strtim("8")) > BUFLN*0.9)
 	t1 = BUFLN/2;
     t1 += from;
-    for (T0 = 0, t = from; t < t1 && sample_valid(); t++)
+    for (T0 = 0, t = from; t < t1 && sample_valid(); t++){
 	T0 += ltsamp(t);
+	printf("to:  %d\n",sample(0,t));
+}
+	
     T0 /= t1 - from;
     Ta = 3 * T0;
 
