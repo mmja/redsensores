@@ -76,7 +76,7 @@ implementation {
 		resultado = wqrs(sample,buffer);
 		
 		//if(resultado!=0){
-		   dbg(DBG_USR1, "QRS detectado en:\%d   \%d\n",sample, resultado);
+		//   dbg(DBG_USR1, "QRS detectado en:\%d   \%d\n",sample, resultado);
 		//}
 		//Ahora evaluamos el resultado y en función de lo que hayamos obtenido mandaremos un paquete, o no haremos nada, etc.
 		

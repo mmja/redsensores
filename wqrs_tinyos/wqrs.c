@@ -31,7 +31,27 @@ int16_t ExpectPeriod;                /* if no QRS is detected over this period,
 					restored upon a detection */
 int8_t timeInit=1;  //1200 datos en 8 segundos 
 int8_t from;		
+int8_t notnoise;   //when a qrs is detected, dont analyse the next EyeClosing values
 
+//********************************************* SAMPLE  ***************************************
+//consultar funciones http://physionet.org/physiotools/wpg/wpg_toc.htm
+//This function return the value (in raw adus) of sample number current in open signal s,
+//if successful, or the value of the previous successfully read sample.
+int16_t getsample( WFDB_Time dat, int16_t *sbuf ){
+ 	static int16_t v;
+    /* If the caller specified a negative sample number, prepare to return
+       sample 0.  This behavior differs from the convention that only the
+       absolute value of the sample number matters. */
+    if (dat < 0L) dat = 0L;
+    /* The requested sample is in the buffer.  Set sample_vflag and
+       return the requested sample. */
+    if ((v = (sbuf [(from+dat)%(BUFLN)] /*+ s*/)) == WFDB_INVALID_SAMPLE)
+        sample_vflag = -1;
+    else
+        sample_vflag = 1;
+    return (v);
+}
+//**************************************************************************************************
 
 /* ltsamp() returns a sample of the length transform of the input at time t.
    Since this program analyzes only one signal, ltsamp() does not have an
@@ -49,6 +69,7 @@ int16_t ltsamp(WFDB_Time current,int16_t *buffer)
     if (lbuf == NULL) {
 		lbuf = (int16_t *)malloc((unsigned)BUFLN*sizeof(int16_t));
 		ebuf = (int8_t *)malloc(BUFLN * sizeof(int8_t));
+		
 		if (lbuf && ebuf) {
 		    for (ebuf[0] = sqrtf(lfsc), tt = 1L; tt < BUFLN; tt++)
 				ebuf[tt] = ebuf[0];
@@ -120,7 +141,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 		
 		int16_t aux=ltsamp((count-1)%(BUFLN),buffer);
 		T0 += aux;
-		dbg(DBG_USR2, "  aux    T0:\%d\n",aux);
+		//dbg(DBG_USR2, "  aux    T0:\%d\n",aux);
 	    if(count==t1){ 
 		    timeInit=0;
 	    	T0 /= (double)t1;
@@ -133,16 +154,16 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
         }
     }
     if(count>BUFLN){
-	     from=(from+1)%(BUFLN-1);
-	     to=(from+BUFLN-1)%(BUFLN-1);
+	     from=(from+1)%(BUFLN);
+	     to=(from+BUFLN-1)%(BUFLN);
     }else{ 
-	    to=(from+count-1)%(BUFLN-1);
+	    to=(from+count-1)%(BUFLN);
     }
     
    
 
-    if(count>=t1){  //cuando el buffer tiene mas de valores
-    	t=(count-1-(EyeClosing/2))%(BUFLN-1);
+    if(count>=t1 && notnoise<=0){  //cuando el buffer tiene mas de valores
+    	t=(count-1-(EyeClosing/2))%(BUFLN);
     /******************************** Main loop *******************************/
     //for (t = 0; t < to || (to == 0L && sample_vflag); t++) {
 		
@@ -180,7 +201,15 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 				
 				    /* Check that we haven't reached the end of the record. */
 				(void)getsample(/*sig,*/ tpq,buffer);
-				if (sample_vflag == 1) return tpq;
+				if (sample_vflag == 1){
+					 notnoise=2*EyeClosing;//esto puede que este mal porque solo debeiria ser eyeclosing 
+					 /* Adjust thresholds */
+					Ta += (max - Ta)/10;
+					T1 = Ta / 3;
+					 dbg(DBG_USR1, "Dato: \%d   Tpg: \%d    count:  \%d\n",datum, tpq,  count);
+					 return tpq;
+					 
+				 }
 				    
 
 				    /********************************************************
@@ -206,7 +235,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 		          
 			}
     //}
-	}
+	}else notnoise--;
 	
 	return (0);
 
