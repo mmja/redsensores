@@ -137,6 +137,7 @@ WFDB_Sample ltsamp(WFDB_Time t)
 	lbuf[(tt)&(BUFLN-1)] = aet += et - ebuf[(tt-LTwindow)&(BUFLN-1)];
 	/* lbuf contains the average of the length-transformed samples over
 	   the interval from tt-LTwindow+1 to tt */
+	  
     }
     return (lbuf[t&(BUFLN-1)]);
 }
@@ -352,11 +353,12 @@ main(int argc, char **argv)
     t1 += from;
     for (T0 = 0, t = from; t < t1 && sample_valid(); t++){
 	T0 += ltsamp(t);
-	printf("to:  %d\n",sample(0,t));
-}
 	
+     }
+	printf("T0\%f \n",T0);
     T0 /= t1 - from;
     Ta = 3 * T0;
+   
 
     /* Main loop */
     for (t = from; t < to || (to == 0L && sample_valid()); t++) {
@@ -402,7 +404,7 @@ main(int argc, char **argv)
 		    annot.time = tpq;
 		    annot.anntyp = NORMAL;
 		    
-		    //printf("tiempo antes  :%d\n",tpq);
+		   // printf("dato1: %d dato3: %d dato6: %d dato9: %d\n",sample(sig,tpq),sample(sig,tpq+5),sample(sig,t),t);
 		    if (putann(0, &annot) < 0) { /* write the annotation */
 			wfdbquit();	/* close files if an error occurred */
 			exit(1);
