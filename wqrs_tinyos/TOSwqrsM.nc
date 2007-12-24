@@ -54,6 +54,7 @@ implementation {
 		if(TOS_LOCAL_ADDRESS!=0){
 			call Timer.stop();
 		}
+		freeBuffers();
 		return SUCCESS;
 	}
 	
