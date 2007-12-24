@@ -30,7 +30,9 @@ int16_t ExpectPeriod;                /* if no QRS is detected over this period,
 					to a minimum value;  the threshold is
 					restored upon a detection */
 int8_t timeInit=1;  //1200 datos en 8 segundos 
-int8_t from;		
+int8_t from;
+int8_t to;
+    		
 int8_t notnoise;   //when a qrs is detected, dont analyse the next EyeClosing values
 
 //********************************************* SAMPLE  ***************************************
@@ -43,9 +45,10 @@ int16_t getsample( WFDB_Time dat, int16_t *sbuf ){
        sample 0.  This behavior differs from the convention that only the
        absolute value of the sample number matters. */
     if (dat < 0L) dat = 0L;
+    if (dat+from>to) dat = to-from; 
     /* The requested sample is in the buffer.  Set sample_vflag and
        return the requested sample. */
-    if ((v = (sbuf [(from+dat)%(BUFLN)] /*+ s*/)) == WFDB_INVALID_SAMPLE)
+    if ((v = (sbuf [(from+dat)&(BUFLN-1)] /*+ s*/)) == WFDB_INVALID_SAMPLE || v==0 )
         sample_vflag = -1;
     else
         sample_vflag = 1;
@@ -67,13 +70,13 @@ int16_t ltsamp(WFDB_Time current,int16_t *buffer)
     static WFDB_Time tt = (WFDB_Time)-1L;
 
     if (lbuf == NULL) {
-		lbuf = (int16_t *)malloc((unsigned)BUFLN*sizeof(int16_t));
-		ebuf = (int8_t *)malloc(BUFLN * sizeof(int8_t));
+		lbuf = (int16_t *)malloc((unsigned)BUFL*sizeof(int16_t));
+		ebuf = (int8_t *)malloc(BUFL * sizeof(int8_t));
 		
 		if (lbuf && ebuf) {
-		    for (ebuf[0] = sqrtf(lfsc), tt = 1L; tt < BUFLN; tt++)
+		    for (ebuf[0] = sqrtf(lfsc), tt = 1L; tt < BUFL; tt++)
 				ebuf[tt] = ebuf[0];
-		    if (current > BUFLN) tt = (WFDB_Time)(current - BUFLN);
+		    if (current > BUFL) tt = (WFDB_Time)(current - BUFL);
 		    else tt = (WFDB_Time)-1L;
 		    Yn = Yn1 = Yn2 = 0;
 		}
@@ -81,7 +84,7 @@ int16_t ltsamp(WFDB_Time current,int16_t *buffer)
 		    exit(2);
 		}
     }
-    if (current < tt - BUFLN) {
+    if (current < tt - BUFL) {
 	    
 		exit(2);
     }
@@ -91,17 +94,18 @@ int16_t ltsamp(WFDB_Time current,int16_t *buffer)
 	
 		Yn2 = Yn1;
 		Yn1 = Yn;
-		if ((v0 = getsample(/*sig,*/ tt,buffer)) != WFDB_INVALID_SAMPLE &&
-		    (v1 = getsample(/*sig,*/ tt-LPn,buffer)) != WFDB_INVALID_SAMPLE &&
-		    (v2 = getsample(/*sig,*/ tt-LP2n,buffer)) != WFDB_INVALID_SAMPLE)
+		if ((v0 = getsample( tt,buffer)) != WFDB_INVALID_SAMPLE&&
+		    (v1 = getsample(tt-LPn,buffer)) != WFDB_INVALID_SAMPLE&&
+		    (v2 = getsample(tt-LP2n,buffer)) != WFDB_INVALID_SAMPLE)
 		    Yn = 2*Yn1 - Yn2 + v0 - 2*v1 + v2;
 		dy = (Yn - Yn1) / LP2n;		/* lowpass derivative of input */
-		et = ebuf[(++tt)%(BUFLN)] = sqrtf(lfsc +dy*dy); /* length transform */
-		lbuf[(tt)%(BUFLN)] = aet += et - ebuf[(tt-LTwindow)%(BUFLN)];
+		et = ebuf[(++tt)&(BUFL-1)] = sqrtf(lfsc +dy*dy); /* length transform */
+		lbuf[(tt)&(BUFL-1)] = aet += et - ebuf[(tt-LTwindow)&(BUFL-1)];
+		 //dbg(DBG_USR3, "tt: \%d ---> v0: \%d v1: \%d  v2: \%d  \n",tt,v0,v1,v2);
 		/* lbuf contains the average of the length-transformed samples over
 		   the interval from tt-LTwindow+1 to tt */
     }
-    return (lbuf[current%(BUFLN)]);// hemos cambiado & por %
+    return (lbuf[current&(BUFL-1)]);// hemos cambiado & por %
 }
 
 
@@ -111,8 +115,6 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
     int8_t max, min, onset, timer;
 
     WFDB_Time  t, tpq, tt;
-    int8_t to;
-    
     
     Tm = muvadu(Tm);
     LTwindow = sps * MaxQRSw;     /* length transform window size */
@@ -121,14 +123,14 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
     ExpectPeriod = sps * NDP;	   /* maximum expected RR interval */
 	
 	lfsc = 1.25*WFDB_DEFGAIN*WFDB_DEFGAIN/sps;	/* length function scale constant */
-
+    
 	LPn = sps/PWFreq;   /* The LP filter will have a notch at the
 				    power line (mains) frequency */
     LP2n = 2 * LPn;
 	t1 = (int16_t)(8*ifreq + 0.5);
     //dbg(DBG_USR2, "count:\%d \n",count);
 	//metemos el nuevo valor datum al buffer en la posicion to (se pierde el primer dato 
-	buffer[count%(BUFLN)]=datum;
+	buffer[count&(BUFLN-1)]=datum;
 	count++;
 	 
     // to = strtim("e");//siempre hace else ya que to=0L, va a dar to=nsambles=65000
@@ -139,31 +141,31 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
        frequency exceeds about 2 KHz. */
 	    //(void)getsample(/*sig,*/ 0L,buffer);
 		
-		int16_t aux=ltsamp((count-1)%(BUFLN),buffer);
+		int16_t aux=ltsamp(count-1,buffer);
 		T0 += aux;
+		 dbg(DBG_USR3, "count: \%d aux:\%d  T0: \%f  \n",count,aux,T0);
 		//dbg(DBG_USR2, "  aux    T0:\%d\n",aux);
 	    if(count==t1){ 
 		    timeInit=0;
+		    dbg(DBG_USR3, "++++++++++++++++++++++++++++++++++++++  T0:\%f  \n",T0);
 	    	T0 /= (double)t1;
 	    	Ta = 3 * T0;	
 	    	T1=T0;
-	    	dbg(DBG_USR3, "++++++++++++++++++++++++++++++++++++++  T0:\%d  \%d \n",T0,Ta);
+	    	dbg(DBG_USR3, "++++++++++++++++++++++++++++++++++++++  T0:\%f  \%f \n",T0,Ta);
 	    	
 	    	
 	    	
         }
     }
     if(count>BUFLN){
-	     from=(from+1)%(BUFLN);
-	     to=(from+BUFLN-1)%(BUFLN);
+	     from=(from+1)&(BUFLN-1);
+	     to=(from+BUFLN-1)&(BUFLN-1);
     }else{ 
-	    to=(from+count-1)%(BUFLN);
+	    to=(from+count-1)&(BUFLN-1);
     }
     
-   
-
     if(count>=t1 && notnoise<=0){  //cuando el buffer tiene mas de valores
-    	t=(count-1-(EyeClosing/2))%(BUFLN);
+    	t=(count-1-(EyeClosing/2));//&(BUFLN-1);
     /******************************** Main loop *******************************/
     //for (t = 0; t < to || (to == 0L && sample_vflag); t++) {
 		
@@ -206,7 +208,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 					 /* Adjust thresholds */
 					Ta += (max - Ta)/10;
 					T1 = Ta / 3;
-					 dbg(DBG_USR1, "Dato: \%d   Tpg: \%d    count:  \%d\n",datum, tpq,  count);
+					 dbg(DBG_USR1, "Dato: \%d ltsamp: \%d  Tpg: \%d    count:  \%d\n",getsample(tpq,buffer),ltsamp(tpq,buffer), tpq,  count);
 					 return tpq;
 					 
 				 }
