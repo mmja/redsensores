@@ -20,7 +20,7 @@ implementation {
 	
 	#include "types.h"
 	
-	#include "wqrs_aux.c"
+	//#include "wqrs_aux.c"
 	#include "wqrs.c"
 	
 	#include "input.h"
@@ -74,11 +74,14 @@ implementation {
 		
 		//Ahora tenemos que llamar al algoritmo con la muestra que acabamos de leer, el resultado del procesamiento de la muestra
 		//se almacena en la variable "resultado":
-		resultado = wqrs(sample,buffer);
+		result = wqrs(sample,buffer);
 		
-		//if(resultado!=0){
-		//   dbg(DBG_USR1, "QRS detectado en:\%d   \%d\n",sample, resultado);
-		//}
+		if(resultado!=0){
+			//result lleva el instante de tiempo en que se detecta el qrs y es lo que se tiene que enviar
+			//par obtener el valor de la señal en que se ha detectado se usa getsample(result,buffer), pero se supone que esto no es importante
+			//solo interesa el momento en que se detecta el qrs
+		   dbg(DBG_USR1, "QRS detected:\%d  value: \%d\n",result,getsample(result,buffer));
+		}
 		//Ahora evaluamos el resultado y en función de lo que hayamos obtenido mandaremos un paquete, o no haremos nada, etc.
 		
 		return SUCCESS;

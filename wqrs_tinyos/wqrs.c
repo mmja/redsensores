@@ -1,7 +1,8 @@
 /*************************************************************************************
 *******************comienza el programa**********************************************
 *************************************************************************************/
-
+#include <math.h>
+#include "wqrs.h"
 //#define BUFLN  16384	/* must be a power of 2, see ltsamp() */
 #define EYE_CLS 0.25    /* eye-closing period is set to 0.25 sec (250 ms) */ 
 //#define LPERIOD 1000	/* learning period is the first LPERIOD samples */
@@ -32,7 +33,25 @@ int16_t ExpectPeriod;                /* if no QRS is detected over this period,
 int8_t timeInit=1;  //1200 datos en 8 segundos 
 int8_t from;
 int8_t to;		
-int8_t notnoise;   //when a qrs is detected, dont analyse the next EyeClosing values
+int32_t notnoise;   //when a qrs is detected, dont analyse the next EyeClosing values
+//********************************************MUVADU**************************************
+//his function converts the potential difference v from microvolts to ADC units, 
+//based on the gain for input signal s.
+
+int16_t muvadu( int8_t v){
+	
+    int32_t x;
+    WFDB_Gain g = WFDB_DEFGAIN;
+
+    if (g == 0.) g = WFDB_DEFGAIN;
+    x = g*v*0.001;
+    if (x >= 0.0)
+	return ((int8_t)(x + 0.5));
+    else
+	return ((int8_t)(x - 0.5));
+
+}
+
 
 //********************************************* SAMPLE  ***************************************
 //consultar funciones http://physionet.org/physiotools/wpg/wpg_toc.htm
@@ -142,18 +161,15 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 		
 		int16_t aux=ltsamp(count-1,buffer);
 		T0 += aux;
-		 dbg(DBG_USR3, "count: \%d aux:\%d sample:\%d T0: \%f  \n",count,aux,datum,T0);
+		 //dbg(DBG_USR3, "count: \%d aux:\%d sample:\%d T0: \%f \n",count,aux,datum,T0);
 		//dbg(DBG_USR2, "  aux    T0:\%d\n",aux);
 	    if(count==t1){ 
 		    timeInit=0;
-		    dbg(DBG_USR3, "++++++++++++++++++++++++++++++++++++++  T0:\%f  \n",T0);
+		    dbg(DBG_USR3, "+++++++++++++++++++End of the learning period+++++++++++++++++\n",T0);
 	    	T0 /= (double)t1;
 	    	Ta = 3 * T0;	
 	    	T1=T0;
-	    	dbg(DBG_USR3, "++++++++++++++++++++++++++++++++++++++  T0:\%f  \%f \n",T0,Ta);
-	    	
-	    	
-	    	
+	    	dbg(DBG_USR3, "+++++++++ Thresholds ++++++++++++++  T0:\%f Ta:\%f \n",T0,Ta);	    	
         }
     }
     if(count>BUFLN){
@@ -162,10 +178,10 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
     }else{ 
 	    to=(from+count-1)&(BUFLN-1);
     }
+    if(count>=t1 && notnoise<=0){  //cuando el buffer tiene mas de valores
+    	 t=(count-1-(EyeClosing/2));//valor a analizar del buffer
     
-    if(count>=t1 ){//&& notnoise<=0){  //cuando el buffer tiene mas de valores
-    	t=(count-1-(EyeClosing/2));//&(BUFLN-1);
-    		 dbg(DBG_USR3, "count: \%d dato:\%d t:\%d sample:\%d -->",count,datum,t,getsample(t,buffer));
+    	//dbg(DBG_USR3, "count: \%d dato:\%d t:\%d sample:\%d -->",count,datum,t,getsample(t,buffer));	
     /******************************** Main loop *******************************/
     //for (t = 0; t < to || (to == 0L && sample_vflag); t++) {
 		
@@ -204,11 +220,11 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 				    /* Check that we haven't reached the end of the record. */
 				(void)getsample(/*sig,*/ tpq,buffer);
 				if (sample_vflag == 1){
-					 notnoise=2*EyeClosing;//esto puede que este mal porque solo debeiria ser eyeclosing 
+					 notnoise=EyeClosing;	// Lock out further detections during the eye-closing period 
 					 /* Adjust thresholds */
 					Ta += (max - Ta)/10;
 					T1 = Ta / 3;
-					 dbg(DBG_USR1, "Dato: \%d Tpq: \%d\n",getsample(tpq,buffer),tpq);
+					 //dbg(DBG_USR1, "Dato: \%d Tpq: \%d\n",getsample(tpq,buffer),tpq);
 					 return tpq;
 					 
 				 }
@@ -224,8 +240,6 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 				Ta += (max - Ta)/10;
 				T1 = Ta / 3;
 
-				/* Lock out further detections during the eye-closing period */
-				//t += EyeClosing;  //????????
 		    }
 		}
 		else 
@@ -236,10 +250,12 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 				T0 = Ta / 3;
 		          
 			}
-				 dbg(DBG_USR3, "\n");
-    //}
-	}else notnoise--;
-	
+				 //dbg(DBG_USR3, "\n");
+    
+	}else{
+		 notnoise--;
+		  // dbg(DBG_USR3, "count: \%d dato:\%d t:\%d sample:\%d noise:\%d-->",count,datum,t,getsample(t,buffer),notnoise);	
+	}
 	return (0);
 
 }
