@@ -363,7 +363,8 @@ main(int argc, char **argv)
     /* Main loop */
     for (t = from; t < to || (to == 0L && sample_valid()); t++) {
 	static int learning = 1, T1;
-	printf("dato: %d t: %d --> ",sample(sig,t),t);
+	//printf("dato: %d t: %d --> ",sample(sig,t),t);
+	printf("%d,",sample(sig,t));
 	if (learning) {
 	    if (t > t1) {
 		learning = 0;
@@ -392,7 +393,7 @@ main(int argc, char **argv)
 			ltsamp(tt-2) - ltsamp(tt-3) < onset &&
 			ltsamp(tt-3) - ltsamp(tt-4) < onset) {
 			tpq = tt - LP2n;	/* account for phase shift */
-			printf("entro: %d",tpq);
+			//printf("entro: %d",tpq);
 			break;
 		    }
 		}
@@ -405,7 +406,7 @@ main(int argc, char **argv)
 		    annot.time = tpq;
 		    annot.anntyp = NORMAL;
 		    
-		    printf("dato1: %d tpq: %d",sample(sig,tpq),tpq);
+		    //printf("dato1: %d tpq: %d",sample(sig,tpq),tpq);
 		    if (putann(0, &annot) < 0) { /* write the annotation */
 			wfdbquit();	/* close files if an error occurred */
 			exit(1);
@@ -438,7 +439,7 @@ main(int argc, char **argv)
 
 
 		/* Lock out further detections during the eye-closing period */
-		t += EyeClosing;
+		//t += EyeClosing;
 	    }
 	}
 	else if (!learning) {
