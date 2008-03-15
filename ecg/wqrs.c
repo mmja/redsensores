@@ -189,7 +189,10 @@ int8_t qwave(int16_t *f){
 int8_t swave(int16_t *f){
 	
 	//Calculamos el 1º minimo local a la DCHA de Rwave
-// OJO !!!!!!!!!!!!!!!FALTA VER CUAL ES LA PARTE POSITIVA
+	
+	// OJO !!!!!!!!!!!!!!!FALTA VER CUAL ES LA PARTE POSITIVA
+
+
 	int16_t right_local_min= mmt(Rwave[1],f);//partimos de la izq de Rwave.
 	int16_t r; //posicion del minimo
 	int32_t	t1;// tienen que tradar menos de 0,12 seg en encontrar el minimo
@@ -219,42 +222,91 @@ int8_t swave(int16_t *f){
 //********************************************************************************************
 int8_t TandPwave(int16_t *f){
 	
-	//MMMMMMMMMMMMMMMMAAAAAAAAAAAAAAAAAAAAALLLLLLLLLLLLLLLL
+int8_t ok;
 	
-	//Pwave=Buscamos 2 maximos locales desde la izq de Qwave hacia la dcha:
+	ok=Pwave(f);
+	ok = ok && Twave(f);
 	
-	int8_t left= Qwave[0]+1;	
-	//Buscamos el ONset de Pwave (1º maximo local)
-	int8_t onsetP=f[Qwave[0]];
-	 while (f(left)!=NULL &&  onsetP<f(left)){onsetP=f(left);left++;}
-	 Pwave[0]=left-1;
+return ok;	
 	 
-	//Ahora buscamos el OFFset de Pwave (2º maximo local)
-	int8_t offsetP=f[left];
-	 while (f(left)!=NULL &&  offsetP<f(left)){offsetP=f(left);left++;}
-	Pwave[1]=left-1;
-	
-	//Twave=Buscamos 2 maximos locales desde la dcha de Qwave hacia la izda:
-	
-	
-	int8_t right= Qwave[1]-1;
-	
-	//Buscamos el ONset de Pwave (1º maximo local)
-	int8_t onsetT=f[Qwave[1]];
-	 while (f(right)!=NULL &&  onsetT<f(right)){onsetT=f(right);right--;}
-	 Twave[0]=right+1; // SERIA Twave[1]= right+1;  ?????
 	 
-	//Ahora buscamos el OFFset de Pwave (2º maximo local)
-	int8_t offsetT=f[right];
-	 while (f(right)!=NULL &&  offsetT<f(right)){offsetT=f(right);right--;}
-	 Twave[1]=right+1; // SERIA Twave[0]= right+1;  ?????
-	
-	//************* FALTARIA COMPROBAR QUE LOS HA ENCONTRADO BIEN!!!!!! return 0 o 1
-	return 0;
-	
 }
-//**********************************************************************************************
 
+
+//*******************************************************************************************
+//***************************  METODOS AUXILIARES ********************************************
+//**********************************************************************************************
+int8_t Pwave(int16_t *f){
+
+	
+	//Pwave=Buscamos 2 maximos locales desde Qwave hacia la izq:
+	
+	int8_t left1;	//posicion 1º max (onset)
+	int8_t left2;	//posicion 2º max(offset)
+	
+	//Buscamos el onset de Pwave (1º maximo local) y el offset (2º maximo local)
+	int8_t onsetP=mmt(Qwave,f);
+
+	//busca 1º maximo local a la izquierda (onset Pwave):   
+	 for(left1=(Qwave-1);left1>=from && onsetP<mmt(left1,f);left1--){    
+	    onsetP=mmt(left1,f);	    
+	}
+    left1++;
+	//busca 2º maximo local a la izquierda(offset Pwave):   
+	int8_t offsetP=mmt(left1-1,f);
+	
+	 for(left2=(left1-1);left2>=from && offsetP<mmt(left2,f);left2--){    
+	    offsetP=mmt(left2,f);	    
+	}
+    left2++;
+	
+	 // si los ha encontrado, crea Rwave y devuelve 0, sino devuelve 1
+    if(left1>=from && left2>=from )
+    {		
+		Pwave[0]=left1;//onset
+		Pwave[1]=left2;//offset
+		return 0;	
+	}
+    else return 1; 
+}	
+//********************************************************
+int8_t Twave(int16_t *f){
+	
+	//Twave=Buscamos 2 maximos locales desde Swave hacia la dcha:
+	
+	int8_t right1;	//posiciion 1º max (onset)
+	int8_t right2;	//posicion 2º max(offset)
+	
+	//Buscamos el onset de Twave (1º maximo local) y el offset (2º maximo local)
+	int8_t onsetT=mmt(Swave,f);
+
+	
+	//busca 1º maximo local a la derecha (onset Twave):   
+	for(right1=(Swave+1);right1<count-s && onsetT<mmt(right1,f);right1++){
+	    onsetT=mmt(right1,f);	    
+	}
+    right1--;
+	//busca 2º maximo local a la derecha (offset Twave):   
+	int8_t offsetT=mmt(right1+1,f);
+	
+	 for(right2=(right1+1);right2<count-s  && offsetT<mmt(right2,f);right2++){    
+	    offsetT=mmt(right2,f);	    
+	}
+    right2--;
+	
+	 // si los ha encontrado, crea Rwave y devuelve 0, sino devuelve 1
+    if(right1< count-s && right2< count-s )
+    {		
+		Twave[0]=right1;//onset
+		Twave[1]=right2;//offset
+		return 0;	
+	}
+    else return 1; 
+}	
+
+//*******************************************************************************************
+//***************************  METODO PRINCIPAL ********************************************
+//**********************************************************************************************
 
 int32_t wqrs(int16_t datum, int16_t *buffer)
 { 
