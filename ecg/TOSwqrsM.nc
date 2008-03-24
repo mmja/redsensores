@@ -64,7 +64,7 @@ implementation {
 		//y saldremos de este método.
 		
 		sample_t sample;
-		int32_t resultado;
+		int32_t result;
 		
 		//Declaración de las demás variables que necesitamos
 		
@@ -76,7 +76,7 @@ implementation {
 		//se almacena en la variable "resultado":
 		result = wqrs(sample,buffer);
 		
-		if(resultado!=0){
+		if(result!=0){
 			//result lleva el instante de tiempo en que se detecta el qrs y es lo que se tiene que enviar
 			//par obtener el valor de la señal en que se ha detectado se usa getsample(result,buffer), pero se supone que esto no es importante
 			//solo interesa el momento en que se detecta el qrs

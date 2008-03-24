@@ -4,9 +4,8 @@
 
 //Para el Paso 1
 int16_t *f0;//Fo= señal original
-int16_t *fb;//Fb=señal de corrección de línea
 //int16_t *f;//F= señal después del preprocesado
-int16_t *B,*Bo,*Bc;//B, Bo (apertura) y Bc (cierre) = se seleccionan basándose en las propiedades de las ondas características de ECG (elementos estructurales)
+int16_t *Be,*Bo,*Bc;//B, Bo (apertura) y Bc (cierre) = se seleccionan basándose en las propiedades de las ondas características de ECG (elementos estructurales)
 
 int16_t from=0,count=0;  //readed values number
 
@@ -30,8 +29,8 @@ int8_t thf, thr; //threshold para el Paso 3 (detectar los Rpeaks)
 int32_t detecinterval; // detection interval= 0,12 segundos, se usa en el Paso 5 y 6 (Qwave y Swave)
 
 
-//************************************************************************************
 
+//*************************************************************************************
 //This function return the value (in raw adus) of sample number current in open signal s,
 //if successful, or the value of the previous successfully read sample.
 int16_t getsample( int16_t dat,int16_t *f){
@@ -52,7 +51,73 @@ int16_t getsample( int16_t dat,int16_t *f){
 //********************************************************************************************
 // step1: morphological filtering for noise reduction and baseline correction
 //********************************************************************************************
-void mmf(int16_t *f){
+
+//************************************************************************************
+
+int16_t* erosion(int16_t *f, int16_t *B){
+	
+	int16_t i;
+	int16_t j;
+	int16_t min;
+	int16_t *result=(int16_t *)malloc(BUFLN*sizeof(int16_t));
+	for(i=(BLN-1)/2;i<(BUFLN-(BLN+1)/2);i++){
+		min=f[i-(BLN-1)/2]-B[0];
+		for(j=0;j<BLN;j++){
+			if(min > (f[i-((BLN-1)/2)+j] - B[j])) min= f[(i-((BLN-1)/2)+j)] - B[j];
+			
+		}
+		result[i]=min;
+			
+		
+	}
+	
+	return result;	
+	
+}
+
+int16_t* dilation(int16_t *f, int16_t *B){
+	
+	int16_t i,j;
+	int16_t max;
+	int16_t *result=(int16_t *)malloc(BUFLN*sizeof(int16_t));
+	for(i=(BLN-1)/2;i<BUFLN-(BLN+1)/2;i++){
+		max=f[i-(BLN-1)/2]-B[0];
+		for(j=0;j<BLN;j++){
+			if(max < (f[i-(BLN-1)/2+j] - B[j])) max=f[i-(BLN-1)/2+j] - B[j];
+			
+		}
+		result[i]=max;
+			
+	}
+    return result;
+}
+
+int16_t* opening(int16_t *f, int16_t *B){
+	return dilation(erosion(f,B),B);
+		
+}
+
+int16_t* closing(int16_t *f, int16_t *B){
+	return erosion(dilation(f,B),B);
+		
+}
+
+//**************************************************************************************
+int16_t* mmf(int16_t *f){
+	int16_t i;
+	int16_t *fb;//Fb=señal de corrección de línea
+	int16_t *res=(int16_t *)malloc(BUFLN*sizeof(int16_t));
+	int16_t *first=(int16_t *)malloc(BUFLN*sizeof(int16_t)),*second=(int16_t *)malloc(BUFLN*sizeof(int16_t));
+	fb=closing(opening(f,Bo),Bc);
+	for(i=0;i<BUFLN;i++){
+		res[i]=f[i]-fb[i];	
+	}
+	first=closing(opening(res,Be),Be);
+	second=opening(closing(res,Be),Be);
+	for(i=0;i<BUFLN;i++){
+		res[i]=(first[i]+second[i])/2;	
+	}
+	return res;
 	
 }
 
@@ -62,12 +127,10 @@ void mmf(int16_t *f){
 int16_t mmt(int16_t current,int16_t *f){
 	
 	static int16_t tt = -1L;
-	int16_t position=count&(BUFLN-1); //position of the last value inserted
-	int16_t x=position-s; //last value morphologicaly transformable
-    if (mf == NULL) {
+	if (mf == NULL) {
 		mf = (int16_t *)malloc(BUFLN*sizeof(int16_t));		
     }
-    if (((current&(BUFLN-1)) < position - BUFLN) && ((current&(BUFLN-1)) > x) ) {
+    if ((current < from) && (current > count - s) ) {
 		return -1;
     }
     while(tt<current){
@@ -176,12 +239,6 @@ int8_t qwave(int16_t *f){
 			return 0;
 		}
     	else return 1;
-    	
-	}
-	return 1;
-	
-	
-	
 }
 //********************************************************************************************
 // step6: Swave detection
@@ -212,34 +269,15 @@ int8_t swave(int16_t *f){
 			return 0;
 		}
     	else return 1;
-    }
-	return 1;
-		
 }
-
-//********************************************************************************************
-// step7: onset and offset, Pwave and Twave detection
-//********************************************************************************************
-int8_t TandPwave(int16_t *f){
-	
-int8_t ok;
-	
-	ok=Pwave(f);
-	ok = ok && Twave(f);
-	
-return ok;	
-	 
-	 
-}
-
-
 //*******************************************************************************************
 //***************************  METODOS AUXILIARES ********************************************
 //**********************************************************************************************
-int8_t Pwave(int16_t *f){
+int8_t pwave(int16_t *f){
 
 	
 	//Pwave=Buscamos 2 maximos locales desde Qwave hacia la izq:
+	int8_t offsetP;
 	
 	int8_t left1;	//posicion 1º max (onset)
 	int8_t left2;	//posicion 2º max(offset)
@@ -248,12 +286,12 @@ int8_t Pwave(int16_t *f){
 	int8_t onsetP=mmt(Qwave,f);
 
 	//busca 1º maximo local a la izquierda (onset Pwave):   
-	 for(left1=(Qwave-1);left1>=from && onsetP<mmt(left1,f);left1--){    
+	for(left1=(Qwave-1);left1>=from && onsetP<mmt(left1,f);left1--){    
 	    onsetP=mmt(left1,f);	    
 	}
     left1++;
 	//busca 2º maximo local a la izquierda(offset Pwave):   
-	int8_t offsetP=mmt(left1-1,f);
+	offsetP=mmt(left1-1,f);
 	
 	 for(left2=(left1-1);left2>=from && offsetP<mmt(left2,f);left2--){    
 	    offsetP=mmt(left2,f);	    
@@ -270,9 +308,10 @@ int8_t Pwave(int16_t *f){
     else return 1; 
 }	
 //********************************************************
-int8_t Twave(int16_t *f){
+int8_t twave(int16_t *f){
 	
 	//Twave=Buscamos 2 maximos locales desde Swave hacia la dcha:
+	int8_t offsetT;
 	
 	int8_t right1;	//posiciion 1º max (onset)
 	int8_t right2;	//posicion 2º max(offset)
@@ -287,7 +326,7 @@ int8_t Twave(int16_t *f){
 	}
     right1--;
 	//busca 2º maximo local a la derecha (offset Twave):   
-	int8_t offsetT=mmt(right1+1,f);
+	offsetT=mmt(right1+1,f);
 	
 	 for(right2=(right1+1);right2<count-s  && offsetT<mmt(right2,f);right2++){    
 	    offsetT=mmt(right2,f);	    
@@ -304,6 +343,23 @@ int8_t Twave(int16_t *f){
     else return 1; 
 }	
 
+//********************************************************************************************
+// step7: onset and offset, Pwave and Twave detection
+//********************************************************************************************
+int8_t TandPwave(int16_t *f){
+	
+int8_t ok;
+	
+	ok=pwave(f);
+	ok = ok || twave(f);
+	
+return ok;	
+	 
+	 
+}
+
+
+
 //*******************************************************************************************
 //***************************  METODO PRINCIPAL ********************************************
 //**********************************************************************************************
@@ -311,39 +367,38 @@ int8_t Twave(int16_t *f){
 int32_t wqrs(int16_t datum, int16_t *buffer)
 { 
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)
-	
+	int16_t *fp;//F= señal después del preprocesado
 	detecinterval=(int16_t)(0.12*FS + 0.5);
     s=FS*W-1;
 	
 	buffer[count&(BUFLN-1)]=datum; //metemos el dato en el buffer
 	count++;
 	from=count-BUFLN+1;  
-	//t=(count-s)&(BUFLN-1);//valor a analizar del buffer
-	
-	//llenado inicial del bucle con s valores
+		
+	//llenado inicial del bucle
 	if(count<BUFLN) return 0;
     
 	//tiempo inicial para fijar los umbrales thr y thf
 
 	
 	// Step 1: morphological filtering for noise reduction and baseline correction
-	mmf(buffer);
+	fp=mmf(buffer);
 	// Step 2: multiscale morphological transform 
-	mmt(count-s,buffer);
+	mmt(count-s,fp);
 	// Step 3: Rpeaks detection, the local maxima and minima
-	correct=rpeak_detection();
+	correct=rpeak_detection(fp);
 	// Step 4: Rwave detection
 	if (correct==0)
-		correct=rwave();
+		correct=rwave(fp);
 	
 	if (correct==0){
 		// Step 5: Qwave detection
-		qwave();
+		qwave(fp);
 		// Step 6: Swave detection
-		correct=swave();
+		correct=swave(fp);
 		// Step 7: onset and offset, Pwave and Twave detection
 		if (correct==0) 
-			correct=TandPwave();
+			correct=TandPwave(fp);
 	}
 	
 	//if(correct==0)//todo ha sido detectado
@@ -351,4 +406,8 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 	
 	
 }
+void freeBuffers(){
+	(void)free(f0);
+    (void)free(mf);
 
+}

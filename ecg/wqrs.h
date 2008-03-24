@@ -1,6 +1,7 @@
 typedef int32_t  WFDB_Time;	    /* units are sample intervals */
 typedef double	     WFDB_Frequency;/* units are Hz (samples/second/signal) */
 #define BUFLN 64//16384	/* must be a power of 2, see ltsamp() */
+#define BLN 64//16384	/* longitud de B */
 
 
 static int8_t sample_vflag;	/* if non-zero, last value returned by sample() was valid */	
@@ -16,4 +17,6 @@ static int8_t sample_vflag;	/* if non-zero, last value returned by sample() was 
 
 int16_t getsample( int16_t dat, int16_t *f );
 int32_t wqrs(int16_t datum, int16_t *buffer);
+void freeBuffers();
+
 
