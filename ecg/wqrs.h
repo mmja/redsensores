@@ -10,7 +10,7 @@ static int8_t sample_vflag;	/* if non-zero, last value returned by sample() was 
 #define WFDB_INVALID_SAMPLE (-32768) /* samples from getvec or getframe with this value are not valid */
 #define WFDB_DEFGAIN	200.0  /* default value for gain (adu/physical unit) */
 
-#define FS 150.0 //sampling frecuency Paso 2
+#define FS 200.0//150.0 //sampling frecuency Paso 2
 #define W 1 //wave width Paso 2 !!!!averiguarlo
 
 

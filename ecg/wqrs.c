@@ -108,6 +108,16 @@ int16_t* mmf(int16_t *f){
 	int16_t *fb;//Fb=señal de corrección de línea
 	int16_t *res=(int16_t *)malloc(BUFLN*sizeof(int16_t));
 	int16_t *first=(int16_t *)malloc(BUFLN*sizeof(int16_t)),*second=(int16_t *)malloc(BUFLN*sizeof(int16_t));
+	//iniciacion de las matrices
+	Bo=(int16_t*)malloc(0.2*FS*sizeof(int16_t));
+	Bc=(int16_t*)malloc(1.5*0.2*FS*sizeof(int16_t));
+	for(i=0;i<1.5*0.2*FS;i++){
+		Bc[i]=0;	
+	}
+	for(i=0;i<0.2*FS;i++){
+		Bo[i]=0;	
+	}
+	
 	fb=closing(opening(f,Bo),Bc);
 	for(i=0;i<BUFLN;i++){
 		res[i]=f[i]-fb[i];	
@@ -138,7 +148,7 @@ int16_t mmt(int16_t current,int16_t *f){
 		int16_t min;
 		int16_t t;
 		int16_t aux;
-		for (t = tt-s; t <= tt+s; t++){ //find the maximum and minimum values 
+		for (t = tt-s; t <= tt+s; t++){ //find the maximum and minimum local values 
 			if((aux=getsample(t,f))!= WFDB_INVALID_SAMPLE){
 				if (aux > max) max = aux;
 				if (aux < min) min = aux;
