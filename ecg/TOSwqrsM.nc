@@ -31,7 +31,7 @@ implementation {
 	TOS_Msg datapck;
 	
 	sample_t _buffer,*buffer=&_buffer;
-	
+	int16_t c=0;
 	command result_t StdControl.init() {
 		//Inicializamos el nodo
 		call Leds.init();
@@ -74,13 +74,15 @@ implementation {
 		
 		//Ahora tenemos que llamar al algoritmo con la muestra que acabamos de leer, el resultado del procesamiento de la muestra
 		//se almacena en la variable "resultado":
-		result = wqrs(sample,buffer);
 		
+		if(c<256){
+			result = wqrs(sample,buffer); c++;
+		}
 		if(result!=0){
 			//result lleva el instante de tiempo en que se detecta el qrs y es lo que se tiene que enviar
 			//par obtener el valor de la señal en que se ha detectado se usa getsample(result,buffer), pero se supone que esto no es importante
 			//solo interesa el momento en que se detecta el qrs
-		   dbg(DBG_USR1, "QRS detected:\%d  value: \%d\n",result,getsample(result,buffer));
+		   //dbg(DBG_USR1, "QRS detected:\%d  value: \%d\n",result,getsample(result,buffer));
 		}
 		//Ahora evaluamos el resultado y en función de lo que hayamos obtenido mandaremos un paquete, o no haremos nada, etc.
 		
