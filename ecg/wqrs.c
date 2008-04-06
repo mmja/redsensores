@@ -9,6 +9,9 @@ int16_t *Bo,*Bc;//B, Bo (apertura) y Bc (cierre) = se seleccionan basándose en l
 int16_t *B1,*B2;
 int16_t from=0,count=0;  //readed values number
 
+//para el paso 1
+int16_t *signal1; //filtering for noise reduction and baseline correction signal
+
 //para el paso 2
 int16_t *mf; //multiscale morphological transformed signal
 
@@ -28,7 +31,8 @@ int8_t s; //window length of (2s+1) samples, s<W*Fs, para el Paso 2 (mmt)
 int8_t thf, thr; //threshold para el Paso 3 (detectar los Rpeaks) 
 int32_t detecinterval; // detection interval= 0,12 segundos, se usa en el Paso 5 y 6 (Qwave y Swave)
 
-
+//int16_t* results0,*results1,*results2,*results3,*results4,*results5,*results6,*results7,*results8,*results9,*results10,*results11; 
+int16_t** results;
 
 //*************************************************************************************
 //This function return the value (in raw adus) of sample number current in open signal s,
@@ -54,57 +58,77 @@ int16_t getsample( int16_t dat,int16_t *f){
 
 //************************************************************************************
 
-int16_t* erosion(int16_t *f, int16_t *B,int16_t lon){
+int16_t* erosion(int16_t result,int16_t *f, int16_t *B,int16_t lon){
 	
 	int16_t i;
 	int16_t j;
 	int16_t min;
-	int16_t *result=(int16_t *)malloc(BUFLN*sizeof(int16_t));
-	for(i=0;i<(lon-1)/2;i++){
-		result[i]=0;	
-	}
-	for(i=(lon-1)/2;i<(BUFLN-(lon+1)/2);i++){
-		min=f[i-(lon-1)/2]-B[0];
-		for(j=1;j<lon;j++){
-			if(min > (f[i-((lon-1)/2)+j] - B[j])) min= f[(i-((lon-1)/2)+j)] - B[j];
+	//static int16_t *result;
+	//if (result[(from+(lon-1)/2)&(BUFLN-1)]==0){
+	if(results[result]==NULL){
+		dbg(DBG_USR1, "entra\%d,%d\n",result,count);
+		results[result] =(int16_t *)malloc(BUFLN*sizeof(int16_t));
+		for(i=(lon-1)/2;i<(BUFLN-(lon+1)/2);i++){
+			min=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
+			for(j=1;j<lon;j++){
+				if(min > (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) min= f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];
 			
+			}
+			results[result][(from+i)&(BUFLN-1)]=min;	
 		}
-		result[i]=min;
+				
+	}else{
+		i=(count-1)-(lon+1)/2;
+		min=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
+			for(j=1;j<lon;j++){
+				if(min > (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) min= f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];
 			
-		
-	}
+			}
+		results[result][(from+i)&(BUFLN-1)]=min;	
+	} 
+	/*for(i=0;i<(lon-1)/2;i++){
+		result[i]=0;	
+	}*/
 	
-	return result;	
+	
+	return results[result];	
 	
 }
 
-int16_t* dilation(int16_t *f, int16_t *B, int16_t lon){
+int16_t* dilation(int16_t result,int16_t *f, int16_t *B, int16_t lon){
 	
 	int16_t i,j;
 	int16_t max;
-	int16_t *result=(int16_t *)malloc(BUFLN*sizeof(int16_t));
-	for(i=0;i<(lon-1)/2;i++){
-		result[i]=0;	
-	}
-	for(i=(lon-1)/2;i<BUFLN-(lon+1)/2;i++){
-		max=f[i-(lon-1)/2]-B[0];
-		for(j=1;j<lon;j++){
-			if(max < (f[i-(lon-1)/2+j] - B[j])) max=f[i-(lon-1)/2+j] - B[j];
+	//static int16_t *result;
+	//if (result[(from+(lon-1)/2)&(BUFLN-1)]==0){
+	if(results[result]==NULL){	
+		results[result] =(int16_t *)malloc(BUFLN*sizeof(int16_t));
+		for(i=(lon-1)/2;i<BUFLN-(lon+1)/2;i++){
+			max=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
+			for(j=1;j<lon;j++){
+				if(max < (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) max=f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];
 			
+			}
+			results[result][(from+i)&(BUFLN-1)]=max;
 		}
-		result[i]=max;
-			
+	}else{
+		i=(count-1)-(lon+1)/2;
+		max=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
+		for(j=1;j<lon;j++){
+			if(max < (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) max=f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];	
+		}
+		results[result][(from+i)&(BUFLN-1)]=max;
 	}
-    return result;
+	return results[result];
 }
 
-int16_t* opening(int16_t *f, int16_t *B, int16_t lon){
-	return dilation(erosion(f,B, lon),B, lon);
+int16_t* opening(int16_t resultd,int16_t resulte,int16_t *f, int16_t *B, int16_t lon){
+	return dilation(resultd,erosion(resulte,f,B, lon),B, lon);
 		
 }
 
-int16_t* closing(int16_t *f, int16_t *B, int16_t lon){
-	return erosion(dilation(f,B,lon),B,lon);
+int16_t* closing(int16_t resultd,int16_t resulte,int16_t *f, int16_t *B, int16_t lon){
+	return erosion(resulte,dilation(resultd,f,B,lon),B,lon);
 		
 }
 
@@ -114,6 +138,10 @@ int16_t* mmf(int16_t *f){
 	int16_t *fb;//Fb=señal de corrección de línea
 	int16_t *res=(int16_t *)malloc(BUFLN*sizeof(int16_t));
 	int16_t *first,*second;//=(int16_t *)malloc(BUFLN*sizeof(int16_t)),*second=(int16_t *)malloc(BUFLN*sizeof(int16_t));
+	
+	//static int16_t** results;
+	
+	
 	//iniciacion de las matrices
 	int16_t lo=0.2*FS;
 	int16_t lc=1.5*lo;
@@ -134,24 +162,43 @@ int16_t* mmf(int16_t *f){
 		B2[i]=0;	
 	}
 	//int16_t B1[]={0,1,5,1,0};
-	fb=closing(opening(f,Bo,lo ),Bc,lc);
+	if(results==NULL){
+		
+		results=(int16_t **)malloc(12*sizeof(int16_t*));
+		/*for(i=0;i<12;i++){
+			results[i]=	(int16_t *)malloc(BUFLN*sizeof(int16_t));
+		}*/	
+	}
+	fb=closing(0,1,opening(2,3,f,Bo,lo ),Bc,lc);
 	
+	//noise suppresion
 	for(i=0;i<BUFLN;i++){
 		res[i]=f[i]-fb[i];	
 	}
-	first=erosion(dilation(res,B1,l1),B2,l1);
-	second=dilation(erosion(res,B1,l1),B2,l1);
-	/*first=closing(opening(res,B1,l1),B1,l1);
-	second=opening(closing(res,B1,l1),B1,l1);*/
+	//first=erosion(dilation(fb,B1,l1),B2,l1);
+	//second=dilation(erosion(fb,B1,l1),B2,l1);
+	first=closing(4,5,opening(6,7,res,B1,l1),B1,l1);
+	second=opening(8,9,closing(10,11,res,B1,l1),B1,l1);
+	//baseline correction
+	/*fb=closing(results[0],results[1],opening(results[2],results[3],f,Bo,lo ),Bc,lc);
+	
+	//noise suppresion
+	for(i=0;i<BUFLN;i++){
+		res[i]=f[i]-fb[i];	
+	}
+	//first=erosion(dilation(fb,B1,l1),B2,l1);
+	//second=dilation(erosion(fb,B1,l1),B2,l1);
+	first=closing(results[4],results[5],opening(results[6],results[7],res,B1,l1),B1,l1);
+	second=opening(results[8],results[9],closing(results[10],results[11],res,B1,l1),B1,l1);*/
 	for(i=0;i<BUFLN;i++){
 		res[i]=(first[i]+second[i])/2;	
 	}
-	(void)free(first);
-	(void)free(second);
+	//(void)free(first);
+	//(void)free(second);
 	(void)free(Bo);
 	(void)free(Bc); 
 	(void)free(B1); 
-	return res;
+	return results[3];
 	
 }
 
@@ -166,7 +213,7 @@ int16_t mmt(int16_t current,int16_t *f){
     }
     
     if ((current < from) && (current > count - s) ) {
-		dbg(DBG_USR1, "aqui stamos\n");
+		
 	    return -1;
     }
 	
@@ -411,7 +458,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 	
 	buffer[count&(BUFLN-1)]=datum; //metemos el dato en el buffer
 	count++;
-	from=count-BUFLN+1;  
+	from=count-BUFLN;  
 		
 	//llenado inicial del bucle
 	if(count<BUFLN) return 0;
@@ -420,12 +467,12 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 
 	
 	// Step 1: morphological filtering for noise reduction and baseline correction
-	//fp=mmf(buffer);
-	fp=buffer;
-	//dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)]);
+	fp=mmf(buffer);
+	//fp=buffer;
+	dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)]);
 	// Step 2: multiscale morphological transform 
-	mmt(count-s,fp);
-	dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mmt(count-s,fp));
+	//mmt(count-s,fp);
+	//dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mmt(count-s,fp));
 	// Step 3: Rpeaks detection, the local maxima and minima
 	/*correct=rpeak_detection(fp);
 	// Step 4: Rwave detection
