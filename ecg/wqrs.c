@@ -17,7 +17,7 @@ int16_t *mf; //multiscale morphological transformed signal
 
 
 //TODOS SON ARRAYS DE 2 POSICIONES EN LA POS.0 SE GUARDA LA POSICION DE INCIO DE f y en la POS.1 la posicion final respecto de f
-int32_t Rpeak;//Paso 3 Rpeak= Local minimo entre Thf y Thr. 
+int16_t Rpeak;//Paso 3 Rpeak= Local minimo entre Thf y Thr. 
 int16_t *Rwave;//Paso 4 (entre el primer max local a la izq y a la derecha de Rpeak)X CADA RPEAK????
 int16_t Qwave;//Paso 5 (puede que no se detecte)1º minimo local a la izq de Rwave
 int16_t Swave;//Paso 6 (puede que no se detecte)1ºminimo local desde la drecha de la parte positiva de Rwave
@@ -27,8 +27,8 @@ int16_t *Pwave;// los 2 primeros maximos locales desde la izq de Pwave
 int16_t *Twave;// los 2 primeros maximos locales desde la dcha de Twave
 
 //CONSTANTES (DESPUES HABRA QUE PONERLO COMO #define ... Nº)
-int8_t s; //window length of (2s+1) samples, s<W*Fs, para el Paso 2 (mmt)
-int8_t thf=150, thr=200; //threshold para el Paso 3 (detectar los Rpeaks) 
+int16_t s; //window length of (2s+1) samples, s<W*Fs, para el Paso 2 (mmt)
+//int8_t /*thf=150,*/ thr; //threshold para el Paso 3 (detectar los Rpeaks) 
 int32_t detecinterval; // detection interval= 0,12 segundos, se usa en el Paso 5 y 6 (Qwave y Swave)
 
 //int16_t* results0,*results1,*results2,*results3,*results4,*results5,*results6,*results7,*results8,*results9,*results10,*results11; 
@@ -258,16 +258,27 @@ int8_t rpeak_detection(int16_t *f){
 // Se calcula Rpeak de tipo int16_t.
 // Se van buscando las locales minimas entre Thf y Thr.
 // devuelve 0 si todo fue OK y 1 si fallo algo.
-    int16_t r; //posicion del minimo
-    int16_t right_local_min=mmt(from,f);
+    int16_t r, ab; //posicion del minimo
+    int16_t  mt, thr;
+ 
+    
+    int16_t right_local_min;
+    right_local_min=mmt(from,f);
+   
     // buscamos el 1º minimo hacia la izqda:
 	r=(from+1);
+	thr=160; 
     while(mf!=NULL && r<(count-s)){
-	    
-	    if(right_local_min>mmt(r,f))
-	    	right_local_min=mmt(r,f);
+	    mt=mmt(r,f);
+	    if(right_local_min>=mt)
+	    	right_local_min=mt;
     
-	    else if(abs(right_local_min)>thr){Rpeak=r-1;return 0;}
+	    else {
+		    
+		    ab=abs(right_local_min);
+	    	if(ab>thr){Rpeak=ab;return 0;}
+    	}
+	    	
 	    r++;    
     }
 	return 1;
@@ -490,6 +501,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 	correct1=rpeak_detection(fp);
 	if (correct1==0){
 		dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d  Rpeak:\%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp),Rpeak);
+		correct =-1;
 	}else{ dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp));}
 	// Step 4: Rwave detection
 	
