@@ -28,7 +28,7 @@ int16_t *Twave;// los 2 primeros maximos locales desde la dcha de Twave
 
 //CONSTANTES (DESPUES HABRA QUE PONERLO COMO #define ... Nº)
 int8_t s; //window length of (2s+1) samples, s<W*Fs, para el Paso 2 (mmt)
-int8_t thf, thr; //threshold para el Paso 3 (detectar los Rpeaks) 
+int8_t thf=150, thr=200; //threshold para el Paso 3 (detectar los Rpeaks) 
 int32_t detecinterval; // detection interval= 0,12 segundos, se usa en el Paso 5 y 6 (Qwave y Swave)
 
 //int16_t* results0,*results1,*results2,*results3,*results4,*results5,*results6,*results7,*results8,*results9,*results10,*results11; 
@@ -67,7 +67,7 @@ int16_t* erosion(int16_t result,int16_t *f, int16_t *B,int16_t lon){
 	//if (result[(from+(lon-1)/2)&(BUFLN-1)]==0){
 	if(results[result]==NULL){
 		
-		dbg(DBG_USR1, "entra\%d,%d\n",result,from);
+		
 		results[result] =(int16_t *)malloc(BUFLN*sizeof(int16_t));
 		for(i=0;i<(lon-1)/2;i++){
 			results[result][(from+i)&(BUFLN-1)]=f[(from+i)&(BUFLN-1)];	
@@ -75,7 +75,7 @@ int16_t* erosion(int16_t result,int16_t *f, int16_t *B,int16_t lon){
 		for(i=(lon-1)/2;i<(BUFLN-(lon+1)/2);i++){
 			min=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
 			for(j=1;j<lon;j++){
-				if(min > (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) min= f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];
+				if(min > (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) min= f[(from+i-(lon-1)/2+j)&(BUFLN-1)] - B[j];
 			
 			}
 			results[result][(from+i)&(BUFLN-1)]=min;	
@@ -196,17 +196,8 @@ int16_t* mmf(int16_t *f){
 	second=dilation(6,erosion(7,fb,B1,l1),B2,l1);
 	//first=closing(4,5,opening(6,7,res,B1,l1),B1,l1);
 	//second=opening(8,9,closing(10,11,res,B1,l1),B1,l1);
-	//baseline correction
-	/*fb=closing(results[0],results[1],opening(results[2],results[3],f,Bo,lo ),Bc,lc);
 	
-	//noise suppresion
-	for(i=0;i<BUFLN;i++){
-		res[i]=f[i]-fb[i];	
-	}
-	//first=erosion(dilation(fb,B1,l1),B2,l1);
-	//second=dilation(erosion(fb,B1,l1),B2,l1);
-	first=closing(results[4],results[5],opening(results[6],results[7],res,B1,l1),B1,l1);
-	second=opening(results[8],results[9],closing(results[10],results[11],res,B1,l1),B1,l1);*/
+	
 	for(i=0;i<BUFLN;i++){
 		res[i]=(first[i]+second[i])/2;	
 	}
@@ -223,10 +214,15 @@ int16_t* mmf(int16_t *f){
 // step2: multiscale morphological transform 
 //********************************************************************************************
 int16_t mmt(int16_t current,int16_t *f){
-	
-	static int16_t tt = -1L;
+	int16_t i;
+	static int16_t tt=0;
 	if (mf == NULL) {
 		mf = (int16_t *)malloc(BUFLN*sizeof(int16_t));		
+		for(i=0;i<s;i++){
+			mf[i&(BUFLN-1)]=0;	
+			
+		}
+		tt=s;
     }
     
     if ((current < from) && (current > count - s) ) {
@@ -271,7 +267,7 @@ int8_t rpeak_detection(int16_t *f){
 	    if(right_local_min>mmt(r,f))
 	    	right_local_min=mmt(r,f);
     
-	    else if(abs(right_local_min)>thf){Rpeak=r;return 0;}
+	    else if(abs(right_local_min)>thr){Rpeak=r-1;return 0;}
 	    r++;    
     }
 	return 1;
@@ -468,7 +464,7 @@ return ok;
 
 int32_t wqrs(int16_t datum, int16_t *buffer)
 { 
-	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)
+	int8_t correct=0,correct1=-1; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)
 	int16_t *fp;//F= señal después del preprocesado
 	detecinterval=(int16_t)(0.12*FS + 0.5);
     s=FS*W-1;
@@ -485,15 +481,19 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 	
 	// Step 1: morphological filtering for noise reduction and baseline correction
 	fp=mmf(buffer);
-	//fp=buffer;
-	dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)]);
+	
+	//dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)]);
 	// Step 2: multiscale morphological transform 
-	//mmt(count-s,fp);
-	//dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mmt(count-s,fp));
+	mmt(count-s,fp);
+	//dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp));
 	// Step 3: Rpeaks detection, the local maxima and minima
-	/*correct=rpeak_detection(fp);
+	correct1=rpeak_detection(fp);
+	if (correct1==0){
+		dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d  Rpeak:\%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp),Rpeak);
+	}else{ dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp));}
 	// Step 4: Rwave detection
-	if (correct==0)
+	
+	/*if (correct==0)
 		correct=rwave(fp);
 	
 	if (correct==0){
