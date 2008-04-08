@@ -75,9 +75,9 @@ implementation {
 		//Ahora tenemos que llamar al algoritmo con la muestra que acabamos de leer, el resultado del procesamiento de la muestra
 		//se almacena en la variable "resultado":
 		
-		if(c<256){
-			result = wqrs(sample,buffer); c++;
-		}
+		//if(c<256){
+			result = wqrs(sample,buffer); //c++;
+		//}
 		if(result!=0){
 			//result lleva el instante de tiempo en que se detecta el qrs y es lo que se tiene que enviar
 			//par obtener el valor de la señal en que se ha detectado se usa getsample(result,buffer), pero se supone que esto no es importante

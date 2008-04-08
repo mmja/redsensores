@@ -66,8 +66,12 @@ int16_t* erosion(int16_t result,int16_t *f, int16_t *B,int16_t lon){
 	//static int16_t *result;
 	//if (result[(from+(lon-1)/2)&(BUFLN-1)]==0){
 	if(results[result]==NULL){
-		dbg(DBG_USR1, "entra\%d,%d\n",result,count);
+		
+		dbg(DBG_USR1, "entra\%d,%d\n",result,from);
 		results[result] =(int16_t *)malloc(BUFLN*sizeof(int16_t));
+		for(i=0;i<(lon-1)/2;i++){
+			results[result][(from+i)&(BUFLN-1)]=f[(from+i)&(BUFLN-1)];	
+		}
 		for(i=(lon-1)/2;i<(BUFLN-(lon+1)/2);i++){
 			min=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
 			for(j=1;j<lon;j++){
@@ -76,19 +80,23 @@ int16_t* erosion(int16_t result,int16_t *f, int16_t *B,int16_t lon){
 			}
 			results[result][(from+i)&(BUFLN-1)]=min;	
 		}
+		for(i=(BUFLN-(lon+1)/2);i<BUFLN;i++){
+			results[result][(from+i)&(BUFLN-1)]=f[(from+i)&(BUFLN-1)];	
+		}
 				
 	}else{
-		i=(count-1)-(lon+1)/2;
-		min=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
+		i=(count-1)-(lon+1)/2; //from+
+		min=f[(i-(lon-1)/2)&(BUFLN-1)]-B[0];
 			for(j=1;j<lon;j++){
-				if(min > (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) min= f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];
+				if(min > (f[(i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) min= f[(i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];
 			
 			}
-		results[result][(from+i)&(BUFLN-1)]=min;	
+		results[result][(i)&(BUFLN-1)]=min;	
+		for(i=((count)-(lon+1)/2);i<count;i++){
+			results[result][(i)&(BUFLN-1)]=f[(i)&(BUFLN-1)];	
+		}
 	} 
-	/*for(i=0;i<(lon-1)/2;i++){
-		result[i]=0;	
-	}*/
+	
 	
 	
 	return results[result];	
@@ -103,6 +111,9 @@ int16_t* dilation(int16_t result,int16_t *f, int16_t *B, int16_t lon){
 	//if (result[(from+(lon-1)/2)&(BUFLN-1)]==0){
 	if(results[result]==NULL){	
 		results[result] =(int16_t *)malloc(BUFLN*sizeof(int16_t));
+		for(i=0;i<(lon-1)/2;i++){
+			results[result][(from+i)&(BUFLN-1)]=f[(from+i)&(BUFLN-1)];	
+		}
 		for(i=(lon-1)/2;i<BUFLN-(lon+1)/2;i++){
 			max=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
 			for(j=1;j<lon;j++){
@@ -111,13 +122,19 @@ int16_t* dilation(int16_t result,int16_t *f, int16_t *B, int16_t lon){
 			}
 			results[result][(from+i)&(BUFLN-1)]=max;
 		}
+		for(i=(BUFLN-(lon+1)/2);i<BUFLN;i++){
+			results[result][(from+i)&(BUFLN-1)]=f[(from+i)&(BUFLN-1)];	
+		}
 	}else{
 		i=(count-1)-(lon+1)/2;
-		max=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
+		max=f[(i-(lon-1)/2)&(BUFLN-1)]-B[0];
 		for(j=1;j<lon;j++){
-			if(max < (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) max=f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];	
+			if(max < (f[(i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) max=f[(i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];	
 		}
-		results[result][(from+i)&(BUFLN-1)]=max;
+		results[result][(i)&(BUFLN-1)]=max;
+		for(i=((count)-(lon+1)/2);i<count;i++){
+			results[result][(i)&(BUFLN-1)]=f[(i)&(BUFLN-1)];	
+		}
 	}
 	return results[result];
 }
@@ -175,10 +192,10 @@ int16_t* mmf(int16_t *f){
 	for(i=0;i<BUFLN;i++){
 		res[i]=f[i]-fb[i];	
 	}
-	//first=erosion(dilation(fb,B1,l1),B2,l1);
-	//second=dilation(erosion(fb,B1,l1),B2,l1);
-	first=closing(4,5,opening(6,7,res,B1,l1),B1,l1);
-	second=opening(8,9,closing(10,11,res,B1,l1),B1,l1);
+	first=erosion(4,dilation(5,fb,B1,l1),B2,l1);
+	second=dilation(6,erosion(7,fb,B1,l1),B2,l1);
+	//first=closing(4,5,opening(6,7,res,B1,l1),B1,l1);
+	//second=opening(8,9,closing(10,11,res,B1,l1),B1,l1);
 	//baseline correction
 	/*fb=closing(results[0],results[1],opening(results[2],results[3],f,Bo,lo ),Bc,lc);
 	
@@ -198,7 +215,7 @@ int16_t* mmf(int16_t *f){
 	(void)free(Bo);
 	(void)free(Bc); 
 	(void)free(B1); 
-	return results[3];
+	return res;
 	
 }
 
