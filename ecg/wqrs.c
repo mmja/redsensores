@@ -276,7 +276,7 @@ int8_t rpeak_detection(int16_t *f){
 	    else {
 		    
 		    ab=abs(right_local_min);
-	    	if(ab>thr){Rpeak=ab;return 0;}
+	    	if(ab>thr){Rpeak=r-1;return 0;}
     	}
 	    	
 	    r++;    
