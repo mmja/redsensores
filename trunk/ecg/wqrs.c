@@ -111,14 +111,15 @@ int16_t* dilation(int16_t result,int16_t *f, int16_t *B, int16_t lon){
 	//if (result[(from+(lon-1)/2)&(BUFLN-1)]==0){
 	if(results[result]==NULL){	
 		results[result] =(int16_t *)malloc(BUFLN*sizeof(int16_t));
+		
 		for(i=0;i<(lon-1)/2;i++){
 			results[result][(from+i)&(BUFLN-1)]=f[(from+i)&(BUFLN-1)];	
 		}
 		for(i=(lon-1)/2;i<BUFLN-(lon+1)/2;i++){
-			max=f[(from+i-(lon-1)/2)&(BUFLN-1)]-B[0];
+			max=f[(from+i-(lon-1)/2)&(BUFLN-1)]+ B[0];
 			for(j=1;j<lon;j++){
-				if(max < (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) max=f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];
-			
+				if(max < (f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] + B[j])) max=f[(from+i-((lon-1)/2)+j)&(BUFLN-1)] + B[j];
+		
 			}
 			results[result][(from+i)&(BUFLN-1)]=max;
 		}
@@ -127,9 +128,9 @@ int16_t* dilation(int16_t result,int16_t *f, int16_t *B, int16_t lon){
 		}
 	}else{
 		i=(count-1)-(lon+1)/2;
-		max=f[(i-(lon-1)/2)&(BUFLN-1)]-B[0];
+		max=f[(i-(lon-1)/2)&(BUFLN-1)]+B[0];
 		for(j=1;j<lon;j++){
-			if(max < (f[(i-((lon-1)/2)+j)&(BUFLN-1)] - B[j])) max=f[(i-((lon-1)/2)+j)&(BUFLN-1)] - B[j];	
+			if(max < (f[(i-((lon-1)/2)+j)&(BUFLN-1)] + B[j])) max=f[(i-((lon-1)/2)+j)&(BUFLN-1)] + B[j];	
 		}
 		results[result][(i)&(BUFLN-1)]=max;
 		for(i=((count)-(lon+1)/2);i<count;i++){
@@ -155,7 +156,7 @@ int16_t* mmf(int16_t *f){
 	int16_t *fb;//Fb=señal de corrección de línea
 	int16_t *res=(int16_t *)malloc(BUFLN*sizeof(int16_t));
 	int16_t *first,*second;//=(int16_t *)malloc(BUFLN*sizeof(int16_t)),*second=(int16_t *)malloc(BUFLN*sizeof(int16_t));
-	
+	int16_t *pero,*pdil;
 	//static int16_t** results;
 	
 	
@@ -203,9 +204,17 @@ int16_t* mmf(int16_t *f){
 	}
 	//(void)free(first);
 	//(void)free(second);
+	 
+	pero=erosion(10,f,B1,l1);
+	pdil=dilation(11,f,B1,l1);	
+	dbg(DBG_USR1, "\%d --> MMF: \%d  fb: %d  value: \%d\n",
+	from,f[(from)&(BUFLN-1)],
+	pero[(from)&(BUFLN-1)],
+	pdil[(from)&(BUFLN-1)]);
 	(void)free(Bo);
 	(void)free(Bc); 
-	(void)free(B1); 
+	(void)free(B1);
+	
 	return res;
 	
 }
@@ -493,17 +502,17 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 	// Step 1: morphological filtering for noise reduction and baseline correction
 	fp=mmf(buffer);
 	
-	//dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)]);
+	//dbg(DBG_USR1, "\%d --> MMF: \%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)]);
 	// Step 2: multiscale morphological transform 
 	mmt(count-s,fp);
 	//dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp));
 	// Step 3: Rpeaks detection, the local maxima and minima
 	correct1=rpeak_detection(fp);
-	if (correct1==0){
+	/*if (correct1==0){
 		dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d  Rpeak:\%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp),Rpeak);
 		correct =-1;
 	}else{ dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp));}
-	// Step 4: Rwave detection
+	*/// Step 4: Rwave detection
 	
 	/*if (correct==0)
 		correct=rwave(fp);
