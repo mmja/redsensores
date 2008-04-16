@@ -75,7 +75,7 @@ implementation {
 		//Ahora tenemos que llamar al algoritmo con la muestra que acabamos de leer, el resultado del procesamiento de la muestra
 		//se almacena en la variable "resultado":
 		
-		//if(c<256){
+		//if(c<512){
 			result = wqrs(sample,buffer); //c++;
 		//}
 		if(result!=0){
