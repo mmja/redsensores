@@ -8,7 +8,7 @@ int16_t *f0;//Fo= señal original
 int16_t *Bo,*Bc;//B, Bo (apertura) y Bc (cierre) = se seleccionan basándose en las propiedades de las ondas características de ECG (elementos estructurales)
 int16_t *B1,*B2;
 int16_t from=0,count=0, init=0;  //readed values number
-
+int16_t notnoise;
 //para el paso 1
 int16_t *signal1; //filtering for noise reduction and baseline correction signal
 
@@ -258,7 +258,7 @@ int16_t mmt(int16_t current,int16_t *f){
 				if (aux < min) min = aux;
 			}
 		}
-		mf[tt&(BUFLN-1)]=((max+min-2*getsample(tt,f)) / s);
+		mf[tt&(BUFLN-1)]=-f[tt&(BUFLN-1)];//10*((max+min-2*getsample(tt,f)) / s);
 		//dbg(DBG_USR1, "\%d --> MMF:   %d   fb:  %d  %d  %d  value:   \%d\n", from, f[(from)&(BUFLN-1)],tt);
 		tt++;
     }	
@@ -284,7 +284,7 @@ int8_t rpeak_detection(int16_t *f){
    
     // buscamos el 1º minimo hacia la izqda:
 	r=(from+1);
-	thr=160; 
+	thr=90; 
     while(mf!=NULL && r<(count-s)){
 	    mt=mmt(r,f);
 	    if(right_local_min>=mt)
@@ -293,7 +293,7 @@ int8_t rpeak_detection(int16_t *f){
 	    else {
 		    
 		    ab=abs(right_local_min);
-	    	if(ab>thr){Rpeak=r-1;return 0;}
+	    	if(ab>thr /*&& Rpeak!=r-1*/){Rpeak=r-1;return 0;}
     	}
 	    	
 	    r++;    
@@ -311,17 +311,20 @@ int8_t rwave(int16_t *f){
 	int16_t right_local_max;
 	int16_t left_local_max;
 	int16_t r,l;//posiciones right y left
+	
+	if(Rwave==NULL) Rwave=(int16_t *)malloc(2*sizeof(int16_t));		
+	
 	//For the Rpeak:   	
     	right_local_max= mmt(Rpeak,f);
     	left_local_max= mmt(Rpeak,f);
     //busca 1º maximo local a la derecha:	    
-    for(r=(Rpeak+1);r<count-s && right_local_max<mmt(r,f);r++){
+    for(r=(Rpeak+1);r<count-s && right_local_max<=mmt(r,f);r++){
 	    right_local_max=mmt(r,f);	    
 	}
     r--;
     
     //busca 1º maximo local a la izquierda:    
-     for(l=(Rpeak-1);l>=from && left_local_max<mmt(l,f);l--){    
+     for(l=(Rpeak-1);l>=from && left_local_max<=mmt(l,f);l--){    
 	    left_local_max=mmt(l,f);	    
 	}
     l++;
@@ -351,7 +354,7 @@ int8_t qwave(int16_t *f){
 	t1 = detecinterval;
 		
 	// buscamos el 1º minimo hacia la izqda:
-	 for(l=(Rwave[0]-1);l>=from && left_local_min>mmt(l,f)&&(t1!=0);l--,t1--){    
+	 for(l=(Rwave[0]-1);l>=from && left_local_min>=mmt(l,f)&&(t1!=0);l--,t1--){    
 	    left_local_min=mmt(l,f);	    
 	}
     l++;
@@ -383,7 +386,7 @@ int8_t swave(int16_t *f){
 	t1 = detecinterval;
 		
 	// buscamos el 1º minimo hacia la izqda:
-	 for(r=(Rwave[1]+1);r<count-s && right_local_min>mmt(r,f)&&(t1!=0);r++,t1--){    
+	 for(r=(Rwave[1]+1);r<count-s && right_local_min>=mmt(r,f)&&(t1!=0);r++,t1--){    
 	    right_local_min=mmt(r,f);	    
 	}
     r--;
@@ -403,32 +406,33 @@ int8_t pwave(int16_t *f){
 
 	
 	//Pwave=Buscamos 2 maximos locales desde Qwave hacia la izq:
-	int8_t offsetP;
+	int16_t offsetP;
 	
-	int8_t left1;	//posicion 1º max (onset)
-	int8_t left2;	//posicion 2º max(offset)
+	int16_t left1=0;	//posicion 1º max (onset)
+	int16_t left2=0;	//posicion 2º max(offset)
 	
 	//Buscamos el onset de Pwave (1º maximo local) y el offset (2º maximo local)
-	int8_t onsetP=mmt(Qwave,f);
+	int16_t onsetP=mmt(Qwave,f);
 
+	if(Pwave==NULL) Pwave=(int16_t *)malloc(2*sizeof(int16_t));		
 	//busca 1º maximo local a la izquierda (onset Pwave):   
-	for(left1=(Qwave-1);left1>=from && onsetP<mmt(left1,f);left1--){    
+	for(left1=(Qwave-1);left1>=from && onsetP<=mmt(left1,f);left1--){    
 	    onsetP=mmt(left1,f);	    
 	}
     left1++;
 	//busca 2º maximo local a la izquierda(offset Pwave):   
 	offsetP=mmt(left1-1,f);
 	
-	 for(left2=(left1-1);left2>=from && offsetP<mmt(left2,f);left2--){    
+	for(left2=(left1-1);left2>=from && offsetP<=mmt(left2,f);left2--){    
 	    offsetP=mmt(left2,f);	    
 	}
     left2++;
-	
+
 	 // si los ha encontrado, crea Rwave y devuelve 0, sino devuelve 1
     if(left1>=from && left2>=from )
     {		
-		Pwave[0]=left1;//onset
-		Pwave[1]=left2;//offset
+		Pwave[0]=left2;//onset
+		Pwave[1]=left1;//offset
 		return 0;	
 	}
     else return 1; 
@@ -437,24 +441,24 @@ int8_t pwave(int16_t *f){
 int8_t twave(int16_t *f){
 	
 	//Twave=Buscamos 2 maximos locales desde Swave hacia la dcha:
-	int8_t offsetT;
+	int16_t offsetT;
 	
-	int8_t right1;	//posiciion 1º max (onset)
-	int8_t right2;	//posicion 2º max(offset)
+	int16_t right1;	//posiciion 1º max (onset)
+	int16_t right2;	//posicion 2º max(offset)
 	
 	//Buscamos el onset de Twave (1º maximo local) y el offset (2º maximo local)
-	int8_t onsetT=mmt(Swave,f);
+	int16_t onsetT=mmt(Swave,f);
 
-	
+	if(Twave==NULL) Twave=(int16_t *)malloc(2*sizeof(int16_t));		
 	//busca 1º maximo local a la derecha (onset Twave):   
-	for(right1=(Swave+1);right1<count-s && onsetT<mmt(right1,f);right1++){
+	for(right1=(Swave+1);right1<count-s && onsetT<=mmt(right1,f);right1++){
 	    onsetT=mmt(right1,f);	    
 	}
     right1--;
 	//busca 2º maximo local a la derecha (offset Twave):   
 	offsetT=mmt(right1+1,f);
 	
-	 for(right2=(right1+1);right2<count-s  && offsetT<mmt(right2,f);right2++){    
+	 for(right2=(right1+1);right2<count-s  && offsetT<=mmt(right2,f);right2++){    
 	    offsetT=mmt(right2,f);	    
 	}
     right2--;
@@ -474,12 +478,11 @@ int8_t twave(int16_t *f){
 //********************************************************************************************
 int8_t TandPwave(int16_t *f){
 	
-int8_t ok;
+int8_t correct;
+
+	correct = pwave(f) || twave(f);
 	
-	ok=pwave(f);
-	ok = ok || twave(f);
-	
-return ok;	
+return correct;	
 	 
 	 
 }
@@ -509,7 +512,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 		return 0;
 	}
 	//tiempo inicial para fijar los umbrales thr y thf
-
+	
 	
 	// Step 1: morphological filtering for noise reduction and baseline correction
 	fp=mmf(buffer);
@@ -517,27 +520,45 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 	//dbg(DBG_USR1, "\%d --> MMF: \%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)]);
 	// Step 2: multiscale morphological transform 
 	mmt(from,fp);
-	dbg(DBG_USR1, "\%d --> f: \%d   MMF:   \%d  value:  \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+	//dbg(DBG_USR1, "\%d --> f: \%d   MMF:   \%d  value:  \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+	
+	if(notnoise>=from){
+		dbg(DBG_USR1, "\%d --> MMF: \%d\n",from,mf[(from)&(BUFLN-1)]);
+		//notnoise--;
+		return 0;	
+	}
+	
 	// Step 3: Rpeaks detection, the local maxima and minima
 	correct1=rpeak_detection(fp);
-	/*if (correct1==0){
-		dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d  Rpeak:\%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp),Rpeak);
+	//if (correct1==0){
+		//dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d  Rpeak:\%d\n",from,fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)],Rpeak);
+		
+		
+	//}//else{ dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);}
+	// Step 4: Rwave detection
+	
+	if (correct==0){		
 		correct =-1;
-	}else{ dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mmt(from,fp));}
-	*/// Step 4: Rwave detection
-	
-	/*if (correct==0)
-		correct=rwave(fp);
-	
+      	correct=rwave(fp);	
+	}
 	if (correct==0){
 		// Step 5: Qwave detection
+		correct=-1;
+		notnoise=Rwave[1]; //de momento suponemos q siempre detecta rwave!!!!!!!!!!!!!!!!!
 		qwave(fp);
+		
 		// Step 6: Swave detection
 		correct=swave(fp);
 		// Step 7: onset and offset, Pwave and Twave detection
-		if (correct==0) 
+		if (correct==0){
+			correct=-1; 
 			correct=TandPwave(fp);
+			if (correct==0)
+			dbg(DBG_USR1, "\%d --> MMF:  \%d  Rpeak:\%d Qw: %d  Sw=%d Pw:\%d - \%d  Tw:\%d - \%d \n",from,mf[(from)&(BUFLN-1)],Rpeak, Qwave,Swave, Pwave[0], Pwave[1],Twave[0], Twave[1] );	
+	
+		}
 	}
+	/*
 	(void)free(fp);
 	//if(correct==0)//todo ha sido detectado
 		return 0;
@@ -548,5 +569,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 void freeBuffers(){
 	(void)free(f0);
     (void)free(mf);
-
+	(void)free(Rwave);
+	(void)free(Pwave);
+	(void)free(Twave);
 }
