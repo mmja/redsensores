@@ -284,7 +284,7 @@ int8_t rpeak_detection(int16_t *f){
    
     // buscamos el 1º minimo hacia la izqda:
 	r=(from+1);
-	thr=9; 
+	thr=66; 
 	//dbg(DBG_USR1, "\hola \n",r,mmt(r-1,f),mt,mmt(r+1,f));
     while(mf!=NULL && r<to/*(count-s-1)*/){
 	    mt=mmt(r,f);
@@ -429,7 +429,7 @@ int8_t pwave(int16_t *f){
 	}
     //left1++;
 	//busca 2º maximo local a la izquierda(offset Pwave):   
-	offsetP=mmt(left1-1,f);
+	offsetP=mmt(left1,f);
 	
 	//for(left2=(left1-1);left2>=from && offsetP<=mmt(left2,f);left2--){    
 	for(left2=(left1-1);left2>=from && !(offsetP<=mmt(left2,f) &&mmt(left2,f)>mmt(left2-1,f));left2--){ 
@@ -466,7 +466,7 @@ int8_t twave(int16_t *f){
 	}
     //right1--;
 	//busca 2º maximo local a la derecha (offset Twave):   
-	offsetT=mmt(right1+1,f);
+	offsetT=mmt(right1,f);
 	// for(right2=(right1+1);right2<count-s  && offsetT<=mmt(right2,f);right2++){
 	 for(right2=(right1+1);right2<to && !(offsetT<=mmt(right2,f) && mmt(right2,f)>mmt(right2+1,f));right2++){    
 	    offsetT=mmt(right2,f);	    
