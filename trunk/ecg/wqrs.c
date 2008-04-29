@@ -284,7 +284,7 @@ int8_t rpeak_detection(int16_t *f){
    
     // buscamos el 1º minimo hacia la izqda:
 	r=(from+1);
-	thr=66; 
+	thr=65; 
 	//dbg(DBG_USR1, "\hola \n",r,mmt(r-1,f),mt,mmt(r+1,f));
     while(mf!=NULL && r<to/*(count-s-1)*/){
 	    mt=mmt(r,f);
@@ -534,7 +534,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 	//dbg(DBG_USR1, "\%d --> f: \%d   MMF:   \%d  value:  \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
 	
 	if(notnoise>=from){
-		dbg(DBG_USR1, "\%d --> MMF: \%d\n",from,mf[(from)&(BUFLN-1)]);
+		dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)]);
 		//notnoise--;
 		return 0;	
 	}
@@ -551,7 +551,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 	if (correct==0){		
 		correct =-1;
       	correct=rwave(fp);	
-	}else{ dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);}
+	}else{ dbg(DBG_USR1, "\%d --> MMF: \%d \%d value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);}
 	if (correct==0){
 		// Step 5: Qwave detection
 		correct=-1;
@@ -565,10 +565,12 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 			correct=-1; 
 			correct=TandPwave(fp);
 			if (correct==0)
-			dbg(DBG_USR1, "\%d --> MMF:  \%d  Rpeak:\%d %d %d Qw: %d  Sw=%d Pw:\%d - \%d  Tw:\%d - \%d \n",from,mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave,Swave, Pwave[0], Pwave[1],Twave[0], Twave[1] );	
+			dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d \%d %d %d %d %d \%d \%d \%d \%d \n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave,Swave, Pwave[0], Pwave[1],Twave[0], Twave[1] );	
 	
-		}else{ dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);}
-	}else{ dbg(DBG_USR1, "\%d --> MMF:\%d  value: \%d\n",from,fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);}
+			//\%d  Rpeak:\%d %d %d Qw: %d  Sw=%d Pw:\%d - \%d  Tw:\%d - \%d 
+			
+		}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);}
+	}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);}
 	/*
 	(void)free(fp);
 	//if(correct==0)//todo ha sido detectado
