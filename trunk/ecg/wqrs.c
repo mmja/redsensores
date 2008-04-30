@@ -277,7 +277,7 @@ int8_t rpeak_detection(int16_t *f){
 // devuelve 0 si todo fue OK y 1 si fallo algo.
     int16_t r, ab; //posicion del minimo
     int16_t  mt, thr;
- 
+ 	int16_t igual;//primera posicion de minimo en caso de que haya varios segudios iguales
     
     //int16_t right_local_min;
     //right_local_min=mmt(from,f);
@@ -289,14 +289,27 @@ int8_t rpeak_detection(int16_t *f){
     while(mf!=NULL && r<to/*(count-s-1)*/){
 	    mt=mmt(r,f);
 	  //  if(right_local_min>=mt)
-	  if(mmt(r-1,f)>=mt && mt<mmt(r+1,f)){
+	  
+	  //SI ES UN MINIMO UNICO
+	  if(mmt(r-1,f)>mt && mt<mmt(r+1,f)){
 	    	//right_local_min=mt;
     	//dbg(DBG_USR1, "\%d --> r-1:  \%d , r: %d, r+1 :\%d \n",r,mmt(r-1,f),mt,mmt(r+1,f));
 	    //else {
-	
+			
 		    ab=abs(mt);
 	    	if(ab>thr/*&& Rpeak!=r-1*/){Rpeak=r/*r-1*/;return 0;}
+    	
 		}
+		//PARTE NUEVA QUE BUSCA EL MINIMO LOCAL, DEVUELVE EL PRIMERO SI ES LLANURA  \___/
+		//----------------------------------------------------------------
+		//SI ES EL 1º DE UNA LLANURA
+		if(mmt(r-1,f)>mt && mt==mmt(r+1,f))igual=r;
+		//SI ES EL ULTIMO DE LA LLANURA Y EL SIGUIENTE ES MAYOR
+		if(mmt(r-1,f)==mt && mt<mmt(r+1,f)){
+			ab=abs(mt);
+	    	if(ab>thr/*&& Rpeak!=r-1*/){Rpeak=igual/*r-1*/; return 0;}
+			}
+		//------------------------------------------------------------------
     	//}
 	    	
 	    r++;    
@@ -314,31 +327,36 @@ int8_t rwave(int16_t *f){
 	int16_t right_local_max;
 	int16_t left_local_max;
 	int16_t r,l;//posiciones right y left
-	
+	int16_t right,left;//verdadera posicion del maximo hacia la dcha
 	if(Rwave==NULL) Rwave=(int16_t *)malloc(2*sizeof(int16_t));		
-	
+	right=-1;
+	left=-1;
 	//For the Rpeak:   	
     	right_local_max= mmt(Rpeak,f);
     	left_local_max= mmt(Rpeak,f);
     //busca 1º maximo local a la derecha:	
        // for(r=(Rpeak+1);r<count-s && right_local_max<=mmt(r,f);r++){    
     for(r=(Rpeak+1);r<to && !(right_local_max<= mmt(r,f) && mmt(r,f)>mmt(r+1,f));r++){
-	    right_local_max=mmt(r,f);	    
+	    //el primero igual lo guardamos   
+	     if(right_local_max< mmt(r,f)&& mmt(r,f)==mmt(r+1,f)){right=r;}		    
+	    right_local_max=mmt(r,f);
 	}
     //r--;
     
     //busca 1º maximo local a la izquierda:   
        //  for(l=(Rpeak-1);l>=from && left_local_max<=mmt(l,f);l--){     
-     for(l=(Rpeak-1);l>=from && !(left_local_max<=mmt(l,f) && mmt(l,f)>mmt(l-1,f));l--){    
+     for(l=(Rpeak-1);l>=from && !(left_local_max<=mmt(l,f) && mmt(l,f)>mmt(l-1,f));l--){ 
+	     //el primero igual lo guardamos   
+	     if(left_local_max< mmt(l,f)&& mmt(l,f)==mmt(l-1,f)){left=l;}	
 	    left_local_max=mmt(l,f);	    
 	}
     //l++;
   
     // si los ha encontrado, crea Rwave y devuelve 0, sino devuelve 1
     if(r< to && l>=from )
-    {		
-		Rwave[0]=l;
-		Rwave[1]=r;
+    {		//comprobamos si habia algun valor guardado antes
+		if(left != -1)Rwave[0]=left;else Rwave[0]=l;
+		if(right != -1)Rwave[1]=right;else Rwave[1]=r;
 		return 0;	
 	}
     else return 1;
@@ -355,12 +373,18 @@ int8_t qwave(int16_t *f){
 	int16_t l; //posicion del minimo
 	int32_t	t1;// tienen que tradar menos de 0,12 seg en encontrar el minimo
 	
+	int16_t left;
+	left=-1;
 	
 	t1 = detecinterval;
 		
 	// buscamos el 1º minimo hacia la izqda:
 	// for(l=(Rwave[0]-1);l>=from && left_local_min>=mmt(l,f)&&(t1!=0);l--,t1--){    
 	 for(l=(Rwave[0]-1);l>=from && !(left_local_min>=mmt(l,f) && mmt(l,f)<mmt(l-1,f))&&(t1!=0);l--,t1--){  
+		 
+		//el primero igual lo guardamos   
+	     if(left_local_min> mmt(l,f)&& mmt(l,f)==mmt(l-1,f)){left=l;} 
+		 
 	    left_local_min=mmt(l,f);	    
 	}
     //l++;
@@ -369,7 +393,7 @@ int8_t qwave(int16_t *f){
 	// si los ha encontrado, crea Qwave y devuelve 0, sino devuelve 1
     	if(l>=from && (t1!=0)) 
 		{
-			Qwave=l;			
+		if(left != -1)	Qwave=left; else Qwave=l;	
 		//Qwave[1]=Rwave[0];
 			return 0;
 		}
@@ -389,11 +413,17 @@ int8_t swave(int16_t *f){
 	int16_t r; //posicion del minimo
 	int32_t	t1;// tienen que tradar menos de 0,12 seg en encontrar el minimo
 	
+	int16_t right;
+	right=-1;
+	
 	t1 = detecinterval;
 		
 	// buscamos el 1º minimo hacia la izqda:
 	// for(r=(Rwave[1]+1);r<count-s && right_local_min>=mmt(r,f)&&(t1!=0);r++,t1--){    
 	 for(r=(Rwave[1]+1);r<to && !(right_local_min>=mmt(r,f) && mmt(r,f)<mmt(r+1,f))&&(t1!=0);r++,t1--){    
+		 
+		if(right_local_min> mmt(r,f)&& mmt(r,f)==mmt(r+1,f)){right=r;}	
+		 
 	    right_local_min=mmt(r,f);	    
 	}
     //r--;
@@ -401,7 +431,7 @@ int8_t swave(int16_t *f){
 	// si los ha encontrado, crea Qwave y devuelve 0, sino devuelve 1
     	if(r<count-s && (t1!=0)) 
 		{
-			Swave=r;			
+			if(right != -1)  Swave=right;else Swave=r;			
 			return 0;
 		}
     	else return 1;
@@ -418,14 +448,19 @@ int8_t pwave(int16_t *f){
 	int16_t left1=0;	//posicion 1º max (onset)
 	int16_t left2=0;	//posicion 2º max(offset)
 	
+	int16_t l1,l2;
+	
+	
 	//Buscamos el onset de Pwave (1º maximo local) y el offset (2º maximo local)
 	int16_t onsetP=mmt(Qwave,f);
-
+l1=-1;l2=-1;
 	if(Pwave==NULL) Pwave=(int16_t *)malloc(2*sizeof(int16_t));		
 	//busca 1º maximo local a la izquierda (onset Pwave):   
 	//for(left1=(Qwave-1);left1>=from && onsetP<=mmt(left1,f);left1--){   
 	for(left1=(Qwave-1);left1>=from && !(onsetP<=mmt(left1,f) && mmt(left1,f)>mmt(left1-1,f));left1--){ 
-	    onsetP=mmt(left1,f);	    
+	    
+		if(onsetP< mmt(left1,f)&& mmt(left1,f)==mmt(left1-1,f)){l1=left1;}
+		onsetP=mmt(left1,f);	    
 	}
     //left1++;
 	//busca 2º maximo local a la izquierda(offset Pwave):   
@@ -433,15 +468,17 @@ int8_t pwave(int16_t *f){
 	
 	//for(left2=(left1-1);left2>=from && offsetP<=mmt(left2,f);left2--){    
 	for(left2=(left1-1);left2>=from && !(offsetP<=mmt(left2,f) &&mmt(left2,f)>mmt(left2-1,f));left2--){ 
-	    offsetP=mmt(left2,f);	    
+	    
+		if(offsetP< mmt(left2,f)&& mmt(left2,f)==mmt(left2-1,f)){l2=left2;}
+		offsetP=mmt(left2,f);	    
 	}
     //left2++;
 
 	 // si los ha encontrado, crea Rwave y devuelve 0, sino devuelve 1
     if(left1>=from && left2>=from )
     {		
-		Pwave[0]=left2;//onset
-		Pwave[1]=left1;//offset
+		if(l2 != -1)Pwave[0]=l2; else Pwave[0]=left2;//onset
+		if(l1 != -1)Pwave[1]=l1;else Pwave[1]=left1;//offset
 		return 0;	
 	}
     else return 1; 
@@ -455,29 +492,36 @@ int8_t twave(int16_t *f){
 	int16_t right1;	//posiciion 1º max (onset)
 	int16_t right2;	//posicion 2º max(offset)
 	
+	int16_t r1,r2;
+
+	
 	//Buscamos el onset de Twave (1º maximo local) y el offset (2º maximo local)
 	int16_t onsetT=mmt(Swave,f);
-
+	r1=-1;r2=-1;
 	if(Twave==NULL) Twave=(int16_t *)malloc(2*sizeof(int16_t));		
 	//busca 1º maximo local a la derecha (onset Twave):   
 	//for(right1=(Swave+1);right1<count-s && onsetT<=mmt(right1,f);right1++){
 	for(right1=(Swave+1);right1<to && !(onsetT<=mmt(right1,f) &&mmt(right1,f)>mmt(right1+1,f));right1++){
-	    onsetT=mmt(right1,f);	    
+	    
+		if(onsetT< mmt(right1,f)&& mmt(right1,f)==mmt(right1+1,f)){r1=right1;}
+		onsetT=mmt(right1,f);	    
 	}
     //right1--;
 	//busca 2º maximo local a la derecha (offset Twave):   
 	offsetT=mmt(right1,f);
 	// for(right2=(right1+1);right2<count-s  && offsetT<=mmt(right2,f);right2++){
 	 for(right2=(right1+1);right2<to && !(offsetT<=mmt(right2,f) && mmt(right2,f)>mmt(right2+1,f));right2++){    
-	    offsetT=mmt(right2,f);	    
+	    
+		 if(offsetT< mmt(right2,f)&& mmt(right2,f)==mmt(right2+1,f)){r2=right2;}
+		 offsetT=mmt(right2,f);	    
 	}
     //right2--;
 	
 	 // si los ha encontrado, crea Rwave y devuelve 0, sino devuelve 1
     if(right1< count-s && right2< count-s )
     {		
-		Twave[0]=right1;//onset
-		Twave[1]=right2;//offset
+		if(r1 != -1) Twave[0]=r1; else Twave[0]=right1;//onset
+		if(r2 != -1) Twave[1]=r2; else Twave[1]=right2;//offset
 		return 0;	
 	}
     else return 1; 
