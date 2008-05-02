@@ -9,6 +9,7 @@ int16_t *Bo,*Bc;//B, Bo (apertura) y Bc (cierre) = se seleccionan basándose en l
 int16_t *B1,*B2;
 int16_t from=0,count=0, init=0,to=0;  //readed values number
 int16_t notnoise;
+int16_t thr; //threshold
 //para el paso 1
 int16_t *signal1; //filtering for noise reduction and baseline correction signal
 
@@ -262,6 +263,11 @@ int16_t mmt(int16_t current,int16_t *f){
 		//dbg(DBG_USR1, "\%d --> MMF:   %d   fb:  %d \n", from, f[(from)&(BUFLN-1)],tt);
 		tt++;
     }	
+    
+    if(abs(mf[current&(BUFLN-1)])>abs(thr+1))
+    
+    thr= abs(abs(mf[current&(BUFLN-1)])-1);
+    
     return mf[current&(BUFLN-1)];
 	
 	
@@ -276,7 +282,7 @@ int8_t rpeak_detection(int16_t *f){
 // Se van buscando las locales minimas entre Thf y Thr.
 // devuelve 0 si todo fue OK y 1 si fallo algo.
     int16_t r, ab; //posicion del minimo
-    int16_t  mt, thr;
+    int16_t  mt;//, thr;
  	int16_t igual;//primera posicion de minimo en caso de que haya varios segudios iguales
     
     //int16_t right_local_min;
@@ -284,7 +290,7 @@ int8_t rpeak_detection(int16_t *f){
    
     // buscamos el 1º minimo hacia la izqda:
 	r=(from+1);
-	thr=65; 
+	//thr=65; 
 	//dbg(DBG_USR1, "\hola \n",r,mmt(r-1,f),mt,mmt(r+1,f));
     while(mf!=NULL && r<to/*(count-s-1)*/){
 	    mt=mmt(r,f);
@@ -551,14 +557,17 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 { 
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)
 	int16_t *fp;//F= señal después del preprocesado
+	//int16_t i;
+	//int8_t notinitthr=0;
 	detecinterval=(int16_t)(0.12*FS + 0.5);
     s=FS*W-1;
-	
+	//thr=0;
 	buffer[count&(BUFLN-1)]=datum; //metemos el dato en el buffer
 	count++;
 	init=count-BUFLN;  
 	from=init+NOPS*(1.5*LQRS*FS-1)/2;
 	to=count-NOPS*(1.5*LQRS*FS-1)/2;
+	
 	
 		
 	//llenado inicial del bucle
@@ -566,7 +575,9 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 		
 		return 0;
 	}
+	
 	//tiempo inicial para fijar los umbrales thr y thf
+	
 	
 	
 	// Step 1: morphological filtering for noise reduction and baseline correction
@@ -574,8 +585,16 @@ int32_t wqrs(int16_t datum, int16_t *buffer)
 	
 	//dbg(DBG_USR1, "\%d --> MMF: \%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)]);
 	// Step 2: multiscale morphological transform 
+	//EN ESTE METODO TAMBIEN FIJAMOS EL UMBRAL!!!!!!!!!!!!!!
 	mmt(from,fp);
+	//fijamos los umbrales thr (max en valor absoluto -1)
+	
+	
+	//dbg(DBG_USR1, "\%d  Inicio Threshold --> THR: \%d \n",count, thr);
 	//dbg(DBG_USR1, "\%d --> f: \%d   MMF:   \%d  value:  \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+	
+	
+	//------------------------------------------------------------
 	
 	if(notnoise>=from){
 		dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)]);
