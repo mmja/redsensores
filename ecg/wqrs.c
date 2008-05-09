@@ -241,13 +241,13 @@ int16_t mmt(int16_t current,int16_t *f){
 				if (aux < min) min = aux;
 			}
 		}
-		mf[tt&(BUFLN-1)]=((max+min-2*getsample(tt,f))*10 / s);
+		mf[tt&(BUFLN-1)]=((max+min-2*getsample(tt,f)) / s);
 		tt++;
     }	
     
-    if(abs(mf[current&(BUFLN-1)])>abs(thr+1))
+    //if(abs(mf[current&(BUFLN-1)])>abs(thr+1))
     
-    thr= abs(abs(mf[current&(BUFLN-1)])-1);
+    //thr= abs(abs(mf[current&(BUFLN-1)])-1);
     
     return mf[current&(BUFLN-1)];
 	
@@ -510,6 +510,91 @@ return correct;
 	 
 	 
 }
+//*******************************************************************************************
+//adaptive thresholding
+//******************************************************************************************
+void quicksort(int16_t *lista,int16_t inf,int16_t sup){
+	
+	int16_t pivote = lista[sup];
+    int16_t i = inf;
+    int16_t j = sup - 1;
+    int8_t cont = 1;
+ 	int16_t temp;
+    // Verificamos que no se crucen los límites
+    if (inf >= sup)
+          return;
+ 
+    //  Clasificamos la sublista
+    while (cont){
+         while (i<sup &&lista[i] < pivote) { ++i; }
+         while (j>inf && lista[j] > pivote ) { --j; }
+         if (i<j/*lista[i] > lista[j]*/){
+              temp = lista[i];
+              lista[i] = lista[j];
+              lista[j] = temp;
+              ++i;--j;
+     	}else
+              cont = 0;
+	}
+ 
+   // Copiamos el pivote en su posición final
+    temp = lista[i];
+    lista[i] = lista[sup];
+    lista[sup] = temp;
+ 
+   // Aplicamos el procedimiento recursivamente a cada sublista
+    quicksort (lista, inf, i - 1);
+    quicksort (lista, i + 1, sup);
+
+}
+void thresholding(int16_t* f){
+	
+	int16_t *lista=(int16_t *)malloc((to-from)*sizeof(int16_t));
+	int16_t *valores;
+	int16_t *cantidad;
+	int16_t pos,n,i,j,min=abs(f[from]),max=abs(f[from]);
+	for(i=0;i<to-from;i++){
+		lista[i]=abs(f[i+from]);
+		if(min>abs(f[i+from]))min=abs(f[i+from]);	
+		if(max<abs(f[i+from]))max=abs(f[i+from]);	
+	}
+	
+	quicksort(lista,0,to-from);
+	
+	n=max-min+1;
+	valores=(int16_t *)malloc((n)*sizeof(int16_t));
+	cantidad=(int16_t *)malloc((n)*sizeof(int16_t));
+	valores[0]=min;//lista[0];
+	cantidad[0]=1;
+	
+	for(i=0,j=0;i<to-from;i++){
+		if(valores[j]!=lista[i]){
+			j++; 
+			valores[j]=valores[j-1]+1;//lista[i];
+			cantidad[j]=0;
+			i--	;
+		}else{
+			cantidad[j]++;
+		}
+	}
+	
+	min=cantidad[0];
+	/*for(i=0;i<=j;i++){
+		dbg(DBG_USR1, "%d  val: \%d    \%d\n",i,valores[i],cantidad[i]);
+	}*/
+	for(i=j;i>0 && !(min>=cantidad[i] && cantidad[i]<cantidad[i-1]);i--){
+		
+		min=cantidad[i]; pos=i;			
+	}
+	thr=valores[pos];
+	dbg(DBG_USR1, "thr : %d \n",thr);
+	free(valores);
+	free(cantidad);
+	free(lista);
+	 
+}
+
+
 
 
 
@@ -544,9 +629,12 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 	//dbg(DBG_USR1, "\%d --> MMF: \%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)]);
 	// Step 2: multiscale morphological transform 
 	
-	mmt(from,fp); //fijamos thr
+	mmt(to,fp); //fijamos thr
 	
-	
+	if(count==BUFLN){
+		thresholding(mf);
+		                                    
+	}             
 	//dbg(DBG_USR1, "\%d  Inicio Threshold --> THR: \%d \n",count, thr);
 	//dbg(DBG_USR1, "\%d --> f: \%d   MMF:   \%d  value:  \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
 	
