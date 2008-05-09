@@ -31,6 +31,7 @@ implementation {
 	TOS_Msg datapck;
 	
 	sample_t _buffer,*buffer=&_buffer;
+	sample_t _out,*out=&_out;
 	int16_t c=0;
 	command result_t StdControl.init() {
 		//Inicializamos el nodo
@@ -44,6 +45,7 @@ implementation {
 		call CommControl.start();
 		if(TOS_LOCAL_ADDRESS!=0){
 			//Esto crea un timer que se dispara cada 100ms
+			 dbg(DBG_USR1, " Rpeak   Amplitud    Rwave       Qwave   Swave  Pwave     Twave \n");
 			call Timer.start(TIMER_REPEAT, 100);
 		}
 		return SUCCESS;
@@ -76,13 +78,13 @@ implementation {
 		//se almacena en la variable "resultado":
 		
 		//if(c<512){
-			result = wqrs(sample,buffer); //c++;
+			result = wqrs(sample,buffer,out); //c++;
 		//}
-		if(result!=0){
-			//result lleva el instante de tiempo en que se detecta el qrs y es lo que se tiene que enviar
+		if(result==1){
+
 			//par obtener el valor de la señal en que se ha detectado se usa getsample(result,buffer), pero se supone que esto no es importante
 			//solo interesa el momento en que se detecta el qrs
-		   //dbg(DBG_USR1, "QRS detected:\%d  value: \%d\n",result,getsample(result,buffer));
+		  // dbg(DBG_USR1, " \%d  %d  [ %d , %d ]  %d  %d  [ \%d , \%d ]  [ \%d , \%d ] \n",out[0],out[1],out[2],out[3],out[4],out[5],out[6],out[7],out[8],out[9]);
 		}
 		//Ahora evaluamos el resultado y en función de lo que hayamos obtenido mandaremos un paquete, o no haremos nada, etc.
 		
