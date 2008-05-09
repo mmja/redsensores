@@ -17,7 +17,7 @@ static int8_t sample_vflag;	/* if non-zero, last value returned by sample() was 
 
 
 int16_t getsample( int16_t dat, int16_t *f );
-int32_t wqrs(int16_t datum, int16_t *buffer);
+int32_t wqrs(int16_t datum, int16_t *buffer, int16_t *out);
 void freeBuffers();
 
 
