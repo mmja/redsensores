@@ -9,7 +9,7 @@ int16_t *Bo,*Bc;//B, Bo (apertura) y Bc (cierre) = se seleccionan basándose en l
 int16_t *B1,*B2;
 int16_t from=0,count=0, init=0,to=0;  //readed values number
 int16_t notnoise;
-int16_t thr; //threshold
+int16_t thr,thf; //threshold
 
 //para el paso 2
 int16_t *mf; //multiscale morphological transformed signal
@@ -275,11 +275,13 @@ int8_t rpeak_detection(int16_t *f){
 	 
 	  
 	  //SI ES UN MINIMO UNICO
-	  if(mmt(r-1,f)>mt && mt<mmt(r+1,f)){
+	  	if(mmt(r-1,f)>mt && mt<mmt(r+1,f)){
 	    	
 			
 		    ab=abs(mt);
-	    	if(ab>thr){Rpeak=r;return 1;}
+	    	if(ab>thr){
+		    	//dbg(DBG_USR1, "ab: \%d ,thr:%d",ab,thr);
+		    	Rpeak=r;return 1;}
     	
 		}
 		//PARTE NUEVA QUE BUSCA EL MINIMO LOCAL, DEVUELVE EL PRIMERO SI ES LLANURA  \___/
@@ -289,8 +291,10 @@ int8_t rpeak_detection(int16_t *f){
 		//SI ES EL ULTIMO DE LA LLANURA Y EL SIGUIENTE ES MAYOR
 		if(mmt(r-1,f)==mt && mt<mmt(r+1,f)){
 			ab=abs(mt);
-	    	if(ab>thr){Rpeak=igual; return 1;}
-			}
+	    	if(ab>thr){
+		    	//dbg(DBG_USR1, "ab: \%d ,thr:%d",ab,thr);
+		    	Rpeak=igual; return 1;}
+		}
 		//------------------------------------------------------------------
     	//}
 	    	
@@ -426,7 +430,7 @@ int8_t pwave(int16_t *f){
 	int16_t left1=0;	//posicion 1º max (onset)
 	int16_t left2=0;	//posicion 2º max(offset)
 	
-	int16_t l1,l2;
+	int16_t l1,l2,l;
 	
 	
 	//Buscamos el onset de Pwave (1º maximo local) y el offset (2º maximo local)
@@ -439,10 +443,14 @@ int8_t pwave(int16_t *f){
 		if(onsetP< mmt(left1,f)&& mmt(left1,f)==mmt(left1-1,f)){l1=left1;}
 		onsetP=mmt(left1,f);	    
 	}
-	//busca 2º maximo local a la izquierda(offset Pwave):   
-	offsetP=mmt(left1,f);
+	//busca minimo intermedio que supere thf
+	for(l=left1;l>=from && !(mmt(l+1,f)>=mmt(l,f) && mmt(l,f)<mmt(l-1,f) && abs(mmt(l,f))>thf);l--);
 	
-	for(left2=(left1-1);left2>=from && !(offsetP<=mmt(left2,f) &&mmt(left2,f)>mmt(left2-1,f));left2--){ 
+	if(l<from)return 0;
+	//busca 2º maximo local a la izquierda(offset Pwave):   
+	offsetP=mmt(l,f);
+	
+	for(left2=l;left2>=from && !(offsetP<=mmt(left2,f) &&mmt(left2,f)>mmt(left2-1,f));left2--){ 
 	    
 		if(offsetP< mmt(left2,f)&& mmt(left2,f)==mmt(left2-1,f)){l2=left2;}
 		offsetP=mmt(left2,f);	    
@@ -466,7 +474,7 @@ int8_t twave(int16_t *f){
 	int16_t right1;	//posiciion 1º max (onset)
 	int16_t right2;	//posicion 2º max(offset)
 	
-	int16_t r1,r2;
+	int16_t r1,r2,r;
 
 	
 	//Buscamos el onset de Twave (1º maximo local) y el offset (2º maximo local)
@@ -479,9 +487,13 @@ int8_t twave(int16_t *f){
 		if(onsetT< mmt(right1,f)&& mmt(right1,f)==mmt(right1+1,f)){r1=right1;}
 		onsetT=mmt(right1,f);	    
 	}
+	//busca minimo intermedio que supere thf
+	for(r=right1;r<to && !(mmt(r-1,f)>=mmt(r,f) && mmt(r,f)<mmt(r+1,f) && abs(mmt(r,f))>thf);r++);
+	
+	if(r>=to)return 0;
 	//busca 2º maximo local a la derecha (offset Twave):   
-	offsetT=mmt(right1,f);
-	 for(right2=(right1+1);right2<to && !(offsetT<=mmt(right2,f) && mmt(right2,f)>mmt(right2+1,f));right2++){    
+	offsetT=mmt(r,f);
+	 for(right2=(r+1);right2<to && !(offsetT<=mmt(right2,f) && mmt(right2,f)>mmt(right2+1,f));right2++){    
 	    
 		 if(offsetT< mmt(right2,f)&& mmt(right2,f)==mmt(right2+1,f)){r2=right2;}
 		 offsetT=mmt(right2,f);	    
@@ -552,13 +564,16 @@ void thresholding(int16_t* f){
 	int16_t *lista=(int16_t *)malloc((to-from)*sizeof(int16_t));
 	int16_t *valores;
 	int16_t *cantidad;
-	int16_t pos,n,i,j,min=abs(f[from]),max=abs(f[from]);
+	int16_t pos,n,i,j,min=abs(f[from&(BUFLN-1)]),max=abs(f[from&(BUFLN-1)]);
+	thr=0;thf=0;
 	for(i=0;i<to-from;i++){
-		lista[i]=abs(f[i+from]);
-		if(min>abs(f[i+from]))min=abs(f[i+from]);	
-		if(max<abs(f[i+from]))max=abs(f[i+from]);	
+		lista[i]=abs(f[(i+from)&(BUFLN-1)]);
+		//dbg(DBG_USR1, "%d  \n",mf[(i+fro)&(BUFLN-1)]);
+		if(min>abs(f[i+from]))min=abs(f[(i+from)&(BUFLN-1)]);	
+		if(max<abs(f[i+from]))max=abs(f[(i+from)&(BUFLN-1)]);	
 	}
-	
+	dbg(DBG_USR1, "max: %d  min: \%d    \%d\n",max,min);
+	dbg(DBG_USR1, "******************************************************************************\n");
 	quicksort(lista,0,to-from);
 	
 	n=max-min+1;
@@ -578,15 +593,21 @@ void thresholding(int16_t* f){
 		}
 	}
 	
-	min=cantidad[0];
-	/*for(i=0;i<=j;i++){
+	min=cantidad[n-1];
+	for(i=0;i<=j;i++){
 		dbg(DBG_USR1, "%d  val: \%d    \%d\n",i,valores[i],cantidad[i]);
-	}*/
-	for(i=j;i>0 && !(min>=cantidad[i] && cantidad[i]<cantidad[i-1]);i--){
-		
-		min=cantidad[i]; pos=i;			
 	}
-	thr=valores[pos];
+	for(i=n-2;i>0 && !(min>=cantidad[i] && cantidad[i]<cantidad[i-1]);i--){
+		
+		min=cantidad[i]; 		
+	}
+	thr=valores[i];
+	min=cantidad[0];
+	for(i=1;i<n && !(min>=cantidad[i] && cantidad[i]<cantidad[i+1]);i++){
+		
+		min=cantidad[i]; 		
+	}
+	thf=valores[i];
 	dbg(DBG_USR1, "thr : %d \n",thr);
 	free(valores);
 	free(cantidad);
@@ -631,8 +652,9 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 	
 	mmt(to,fp); //fijamos thr
 	
-	if(count==BUFLN){
+	if((count&(BUFLN-1))==0){
 		thresholding(mf);
+		dbg(DBG_USR1, "thr: \%d thf: \%d \n",thr,thf);
 		                                    
 	}             
 	//dbg(DBG_USR1, "\%d  Inicio Threshold --> THR: \%d \n",count, thr);
@@ -648,7 +670,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 	}
 	
 	// Step 3: Rpeaks detection, the local maxima and minima
-	correct=rpeak_detection(fp);
+	/*correct=rpeak_detection(fp);
 	// Step 4: Rwave detection
 	
 	if (correct==1){		
@@ -671,16 +693,17 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 					out[6]= Pwave[0];out[7]= Pwave[1];out[8]=Twave[0];out[9]= Twave[1];
 					dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d \%d %d %d %d %d \%d \%d \%d \%d \n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave,Swave, Pwave[0], Pwave[1],Twave[0], Twave[1] );	
 					return 1;
+				}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d   else0\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+					}
+			}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d   else1\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
 				}
-			}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
-			}
-		}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
-		}
+		}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d   \%d  else2\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+				}
 	
 	}else{ 
-		dbg(DBG_USR1, "\%d --> MMF: \%d \%d value: \%d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+		dbg(DBG_USR1, "\%d --> MMF: \%d \%d   \%d   else3\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
 		
-	}
+	}*/
 	(void)free(fp);
 	
 	return 0;
