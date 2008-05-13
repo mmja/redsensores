@@ -241,7 +241,7 @@ int16_t mmt(int16_t current,int16_t *f){
 				if (aux < min) min = aux;
 			}
 		}
-		mf[tt&(BUFLN-1)]=((max+min-2*getsample(tt,f)) / s);
+		mf[tt&(BUFLN-1)]=((max+min-2*getsample(tt,f))*10 / s);
 		tt++;
     }	
     
@@ -445,7 +445,7 @@ int8_t pwave(int16_t *f){
 	}
 	//busca minimo intermedio que supere thf
 	for(l=left1;l>=from && !(mmt(l+1,f)>=mmt(l,f) && mmt(l,f)<mmt(l-1,f) && abs(mmt(l,f))>thf);l--);
-	
+	//l=left1;
 	if(l<from)return 0;
 	//busca 2º maximo local a la izquierda(offset Pwave):   
 	offsetP=mmt(l,f);
@@ -489,7 +489,7 @@ int8_t twave(int16_t *f){
 	}
 	//busca minimo intermedio que supere thf
 	for(r=right1;r<to && !(mmt(r-1,f)>=mmt(r,f) && mmt(r,f)<mmt(r+1,f) && abs(mmt(r,f))>thf);r++);
-	
+	//r=right1;
 	if(r>=to)return 0;
 	//busca 2º maximo local a la derecha (offset Twave):   
 	offsetT=mmt(r,f);
@@ -568,13 +568,12 @@ void thresholding(int16_t* f){
 	thr=0;thf=0;
 	for(i=0;i<to-from;i++){
 		lista[i]=abs(f[(i+from)&(BUFLN-1)]);
-		//dbg(DBG_USR1, "%d  \n",mf[(i+fro)&(BUFLN-1)]);
-		if(min>abs(f[i+from]))min=abs(f[(i+from)&(BUFLN-1)]);	
-		if(max<abs(f[i+from]))max=abs(f[(i+from)&(BUFLN-1)]);	
 	}
-	dbg(DBG_USR1, "max: %d  min: \%d    \%d\n",max,min);
-	dbg(DBG_USR1, "******************************************************************************\n");
+	
 	quicksort(lista,0,to-from);
+	
+	max=lista[to-from-1];
+	min=lista[0];
 	
 	n=max-min+1;
 	valores=(int16_t *)malloc((n)*sizeof(int16_t));
@@ -593,11 +592,12 @@ void thresholding(int16_t* f){
 		}
 	}
 	
-	min=cantidad[n-1];
-	for(i=0;i<=j;i++){
+	
+	for(i=0;i<n;i++){
 		dbg(DBG_USR1, "%d  val: \%d    \%d\n",i,valores[i],cantidad[i]);
 	}
-	for(i=n-2;i>0 && !(min>=cantidad[i] && cantidad[i]<cantidad[i-1]);i--){
+	min=cantidad[n-3];
+	for(i=n-4;i>0 && !(min>=cantidad[i] && cantidad[i]<cantidad[i-1]);i--){
 		
 		min=cantidad[i]; 		
 	}
@@ -608,7 +608,7 @@ void thresholding(int16_t* f){
 		min=cantidad[i]; 		
 	}
 	thf=valores[i];
-	dbg(DBG_USR1, "thr : %d \n",thr);
+	
 	free(valores);
 	free(cantidad);
 	free(lista);
@@ -670,7 +670,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 	}
 	
 	// Step 3: Rpeaks detection, the local maxima and minima
-	/*correct=rpeak_detection(fp);
+	correct=rpeak_detection(fp);
 	// Step 4: Rwave detection
 	
 	if (correct==1){		
@@ -693,9 +693,9 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 					out[6]= Pwave[0];out[7]= Pwave[1];out[8]=Twave[0];out[9]= Twave[1];
 					dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d \%d %d %d %d %d \%d \%d \%d \%d \n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave,Swave, Pwave[0], Pwave[1],Twave[0], Twave[1] );	
 					return 1;
-				}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d   else0\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+				}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d   else0 \%d %d %d %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave,Swave);
 					}
-			}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d   else1\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+			}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d   else1 %d \%d %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1]);
 				}
 		}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d   \%d  else2\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
 				}
@@ -703,7 +703,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 	}else{ 
 		dbg(DBG_USR1, "\%d --> MMF: \%d \%d   \%d   else3\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
 		
-	}*/
+	}
 	(void)free(fp);
 	
 	return 0;
