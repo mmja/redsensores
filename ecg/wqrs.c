@@ -241,7 +241,7 @@ int16_t mmt(int16_t current,int16_t *f){
 				if (aux < min) min = aux;
 			}
 		}
-		mf[tt&(BUFLN-1)]=((max+min-2*getsample(tt,f))*10 / s);
+		mf[tt&(BUFLN-1)]=((max+min-2*getsample(tt,f)) / s);
 		tt++;
     }	
     
@@ -365,7 +365,7 @@ int8_t qwave(int16_t *f){
 	t1 = detecinterval;
 		
 	// buscamos el 1º minimo hacia la izqda:
-	 for(l=(Rwave[0]-1);l>=from && !(left_local_min>=mmt(l,f) && mmt(l,f)<mmt(l-1,f))&&(t1!=0);l--,t1--){  
+	 for(l=(Rwave[0]-1);l>=from && !(left_local_min>=mmt(l,f) && mmt(l,f)<mmt(l-1,f) && abs(mmt(l,f))&&(t1!=0);l--,t1--){  
 		 
 		//el primero igual lo guardamos   
 	     if(left_local_min> mmt(l,f)&& mmt(l,f)==mmt(l-1,f)){left=l;} 
@@ -402,7 +402,7 @@ int8_t swave(int16_t *f){
 	t1 = detecinterval;
 		
 	// buscamos el 1º minimo hacia la izqda:
-	 for(r=(Rwave[1]+1);r<to && !(right_local_min>=mmt(r,f) && mmt(r,f)<mmt(r+1,f))&&(t1!=0);r++,t1--){    
+	 for(r=(Rwave[1]+1);r<to && !(right_local_min>=mmt(r,f) && mmt(r,f)<mmt(r+1,f) && abs(mmt(r,f))&&(t1!=0);r++,t1--){    
 		 
 		if(right_local_min> mmt(r,f)&& mmt(r,f)==mmt(r+1,f)){right=r;}	
 		 
@@ -438,19 +438,19 @@ int8_t pwave(int16_t *f){
 	l1=-1;l2=-1;
 	if(Pwave==NULL) Pwave=(int16_t *)malloc(2*sizeof(int16_t));		
 	//busca 1º maximo local a la izquierda (onset Pwave):   
-	for(left1=(Qwave-1);left1>=from && !(onsetP<=mmt(left1,f) && mmt(left1,f)>mmt(left1-1,f));left1--){ 
+	for(left1=(Qwave-1);left1>=from && !(onsetP<=mmt(left1,f) && mmt(left1,f)>mmt(left1-1,f) && abs(mmt(left1,f));left1--){ 
 	    
 		if(onsetP< mmt(left1,f)&& mmt(left1,f)==mmt(left1-1,f)){l1=left1;}
 		onsetP=mmt(left1,f);	    
 	}
 	//busca minimo intermedio que supere thf
-	for(l=left1;l>=from && !(mmt(l+1,f)>=mmt(l,f) && mmt(l,f)<mmt(l-1,f) && abs(mmt(l,f))>thf);l--);
+	for(l=left1;l>=from && !(mmt(l+1,f)>=mmt(l,f) && mmt(l,f)<mmt(l-1,f) && abs(mmt(l,f) )>thf);l--);
 	//l=left1;
 	if(l<from)return 0;
 	//busca 2º maximo local a la izquierda(offset Pwave):   
 	offsetP=mmt(l,f);
 	
-	for(left2=l;left2>=from && !(offsetP<=mmt(left2,f) &&mmt(left2,f)>mmt(left2-1,f));left2--){ 
+	for(left2=l;left2>=from && !(offsetP<=mmt(left2,f) &&mmt(left2,f)>mmt(left2-1,f) && abs(mmt(left2,f));left2--){ 
 	    
 		if(offsetP< mmt(left2,f)&& mmt(left2,f)==mmt(left2-1,f)){l2=left2;}
 		offsetP=mmt(left2,f);	    
@@ -482,7 +482,7 @@ int8_t twave(int16_t *f){
 	r1=-1;r2=-1;
 	if(Twave==NULL) Twave=(int16_t *)malloc(2*sizeof(int16_t));		
 	//busca 1º maximo local a la derecha (onset Twave):   
-	for(right1=(Swave+1);right1<to && !(onsetT<=mmt(right1,f) &&mmt(right1,f)>mmt(right1+1,f));right1++){
+	for(right1=(Swave+1);right1<to && !(onsetT<=mmt(right1,f) &&mmt(right1,f)>mmt(right1+1,f) && abs(mmt(right1,f))>thf);right1++){
 	    
 		if(onsetT< mmt(right1,f)&& mmt(right1,f)==mmt(right1+1,f)){r1=right1;}
 		onsetT=mmt(right1,f);	    
@@ -493,7 +493,7 @@ int8_t twave(int16_t *f){
 	if(r>=to)return 0;
 	//busca 2º maximo local a la derecha (offset Twave):   
 	offsetT=mmt(r,f);
-	 for(right2=(r+1);right2<to && !(offsetT<=mmt(right2,f) && mmt(right2,f)>mmt(right2+1,f));right2++){    
+	 for(right2=(r+1);right2<to && !(offsetT<=mmt(right2,f) && mmt(right2,f)>mmt(right2+1,f) && abs(mmt(right2,f))>thf);right2++){    
 	    
 		 if(offsetT< mmt(right2,f)&& mmt(right2,f)==mmt(right2+1,f)){r2=right2;}
 		 offsetT=mmt(right2,f);	    
@@ -566,7 +566,9 @@ void thresholding(int16_t* f){
 	int16_t *cantidad;
 	int16_t pos,n,i,j,min=abs(f[from&(BUFLN-1)]),max=abs(f[from&(BUFLN-1)]);
 	thr=0;thf=0;
+	
 	for(i=0;i<to-from;i++){
+		
 		lista[i]=abs(f[(i+from)&(BUFLN-1)]);
 	}
 	
