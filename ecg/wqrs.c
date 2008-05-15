@@ -322,7 +322,7 @@ int8_t rwave(int16_t *f){
     	left_local_max= mmt(Rpeak,f);
     //busca 1º maximo local a la derecha:	
            
-    for(r=(Rpeak+1);r<to && !(right_local_max<= mmt(r,f) && mmt(r,f)>mmt(r+1,f));r++){
+    for(r=(Rpeak+1);r<to && !(right_local_max<= mmt(r,f) && mmt(r,f)>mmt(r+1,f) && abs(mmt(r,f) )>thf);r++){
 	    //el primero igual lo guardamos   
 	     if(right_local_max< mmt(r,f)&& mmt(r,f)==mmt(r+1,f)){right=r;}		    
 	    right_local_max=mmt(r,f);
@@ -331,7 +331,7 @@ int8_t rwave(int16_t *f){
     
     //busca 1º maximo local a la izquierda:   
        
-     for(l=(Rpeak-1);l>=from && !(left_local_max<=mmt(l,f) && mmt(l,f)>mmt(l-1,f));l--){ 
+     for(l=(Rpeak-1);l>=from && !(left_local_max<=mmt(l,f) && mmt(l,f)>mmt(l-1,f) && abs(mmt(l,f) )>thf);l--){ 
 	     //el primero igual lo guardamos   
 	     if(left_local_max< mmt(l,f)&& mmt(l,f)==mmt(l-1,f)){left=l;}	
 	    left_local_max=mmt(l,f);	    
@@ -365,7 +365,7 @@ int8_t qwave(int16_t *f){
 	t1 = detecinterval;
 		
 	// buscamos el 1º minimo hacia la izqda:
-	 for(l=(Rwave[0]-1);l>=from && !(left_local_min>=mmt(l,f) && mmt(l,f)<mmt(l-1,f) && abs(mmt(l,f))&&(t1!=0);l--,t1--){  
+	 for(l=(Rwave[0]-1);l>=from && !(left_local_min>=mmt(l,f) && mmt(l,f)<mmt(l-1,f) && abs(mmt(l,f))>thf)&&(t1!=0);l--,t1--){  
 		 
 		//el primero igual lo guardamos   
 	     if(left_local_min> mmt(l,f)&& mmt(l,f)==mmt(l-1,f)){left=l;} 
@@ -374,15 +374,16 @@ int8_t qwave(int16_t *f){
 	}
     //l++;
 	
-	
+		if(left != -1)	Qwave=left; else Qwave=l;	
 	// si los ha encontrado, crea Qwave y devuelve 0, sino devuelve 1
     	if(l>=from && (t1!=0)) 
 		{
-		if(left != -1)	Qwave=left; else Qwave=l;	
-				
 			return 1;
 		}
-    	else return 0;
+    	else{ 
+	    	
+	    	return 0;
+    	}
 }
 //********************************************************************************************
 // step6: Swave detection
@@ -402,25 +403,29 @@ int8_t swave(int16_t *f){
 	t1 = detecinterval;
 		
 	// buscamos el 1º minimo hacia la izqda:
-	 for(r=(Rwave[1]+1);r<to && !(right_local_min>=mmt(r,f) && mmt(r,f)<mmt(r+1,f) && abs(mmt(r,f))&&(t1!=0);r++,t1--){    
+	 for(r=(Rwave[1]+1);r<to && !(right_local_min>=mmt(r,f) && mmt(r,f)<mmt(r+1,f) && abs(mmt(r,f))>thf)&&(t1!=0);r++,t1--){    
 		 
 		if(right_local_min> mmt(r,f)&& mmt(r,f)==mmt(r+1,f)){right=r;}	
 		 
 	    right_local_min=mmt(r,f);	    
 	}
-   
+   		if(right != -1)  Swave=right;else Swave=r;		
 
 	// si los ha encontrado, crea Qwave y devuelve 0, sino devuelve 1
     	if(r<count-s && (t1!=0)) 
 		{
-			if(right != -1)  Swave=right;else Swave=r;			
+			
 			return 1;
 		}
     	else return 0;
 }
-//*******************************************************************************************
-//***************************  METODOS AUXILIARES ********************************************
-//**********************************************************************************************
+
+
+//********************************************************************************************
+// step7: onset and offset, Pwave and Twave detection
+//********************************************************************************************
+	 
+	 
 int8_t pwave(int16_t *f){
 
 	
@@ -438,7 +443,7 @@ int8_t pwave(int16_t *f){
 	l1=-1;l2=-1;
 	if(Pwave==NULL) Pwave=(int16_t *)malloc(2*sizeof(int16_t));		
 	//busca 1º maximo local a la izquierda (onset Pwave):   
-	for(left1=(Qwave-1);left1>=from && !(onsetP<=mmt(left1,f) && mmt(left1,f)>mmt(left1-1,f) && abs(mmt(left1,f));left1--){ 
+	for(left1=(Qwave-1);left1>=from && !(onsetP<=mmt(left1,f) && mmt(left1,f)>mmt(left1-1,f) && abs(mmt(left1,f)>thf));left1--){ 
 	    
 		if(onsetP< mmt(left1,f)&& mmt(left1,f)==mmt(left1-1,f)){l1=left1;}
 		onsetP=mmt(left1,f);	    
@@ -450,7 +455,7 @@ int8_t pwave(int16_t *f){
 	//busca 2º maximo local a la izquierda(offset Pwave):   
 	offsetP=mmt(l,f);
 	
-	for(left2=l;left2>=from && !(offsetP<=mmt(left2,f) &&mmt(left2,f)>mmt(left2-1,f) && abs(mmt(left2,f));left2--){ 
+	for(left2=l;left2>=from && !(offsetP<=mmt(left2,f) &&mmt(left2,f)>mmt(left2-1,f) && abs(mmt(left2,f)>thf));left2--){ 
 	    
 		if(offsetP< mmt(left2,f)&& mmt(left2,f)==mmt(left2-1,f)){l2=left2;}
 		offsetP=mmt(left2,f);	    
@@ -508,20 +513,6 @@ int8_t twave(int16_t *f){
 	}
     else return 0; 
 }	
-
-//********************************************************************************************
-// step7: onset and offset, Pwave and Twave detection
-//********************************************************************************************
-int8_t TandPwave(int16_t *f){
-	
-int8_t correct;
-
-	correct = pwave(f) && twave(f);
-	
-return correct;	
-	 
-	 
-}
 //*******************************************************************************************
 //adaptive thresholding
 //******************************************************************************************
@@ -629,6 +620,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 { 
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)
 	int16_t *fp;//F= señal después del preprocesado
+	int8_t *combine=(int8_t *)malloc(4*sizeof(int8_t));	
 	
 	detecinterval=(int16_t)(0.12*FS + 0.5);
     s=FS*W-1;
@@ -679,33 +671,68 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 		correct =-1;
       	correct=rwave(fp);	
       	if (correct==1){
+	      	
+	   	
 			// Step 5: Qwave detection
-			correct=-1;
+		
 			notnoise=Rwave[1]; 
-			correct=qwave(fp);
-			
+			combine[3]=qwave(fp);
 			// Step 6: Swave detection
-			correct= correct && swave(fp);
+			combine[2]= swave(fp);
 			// Step 7: onset and offset, Pwave and Twave detection
-			if (correct==1){
-				correct=-1; 
-				correct=TandPwave(fp);
+			combine[1]=pwave(fp);
+			combine[0]=twave(fp);
+			
+		//	if (correct!=1){ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d   Qwave not detected %d \%d %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1]);}
+			
+		
+			//tenemos que tocarlo en funcion de combine
+		
+		out[0]=Rpeak;out[1]=mmt(Rpeak,fp);out[2]=Rwave[0];out[3]=Rwave[1];
+		
+			if(combine[3]==1)out[4]=Qwave; else out[4]=-1;
+			if(combine[2]==1)out[5]=Swave; else out[5]=-1;
+			if(combine[1]==1){  out[6]= Pwave[0];out[7]= Pwave[1];}else {out[6]= -1;out[7]=-1;}
+			if(combine[0]==1){out[8]=Twave[0];out[9]= Twave[1];}else {out[8]=-1;out[9]= -1;}
+			dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d \%d %d %d %d %d \%d \%d \%d \%d \n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)],out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9]);	
+
+			
+		/*	
+			
+				correct=-1;
+				correct= swave(fp);
+				// Step 7: onset and offset, Pwave and Twave detection
 				if (correct==1){
-					out[0]=Rpeak;out[1]=mmt(Rpeak,fp);out[2]=Rwave[0];out[3]=Rwave[1];out[4]=Qwave;out[5]=Swave;
-					out[6]= Pwave[0];out[7]= Pwave[1];out[8]=Twave[0];out[9]= Twave[1];
-					dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d \%d %d %d %d %d \%d \%d \%d \%d \n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave,Swave, Pwave[0], Pwave[1],Twave[0], Twave[1] );	
-					return 1;
-				}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d   else0 \%d %d %d %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave,Swave);
+					correct=-1; 
+					correct=twave(fp);
+					if (correct==1){
+						correct=-1; 
+						correct=pwave(fp);
+						if (correct==1){
+							out[0]=Rpeak;out[1]=mmt(Rpeak,fp);out[2]=Rwave[0];out[3]=Rwave[1];out[4]=Qwave;out[5]=Swave;
+							out[6]= Pwave[0];out[7]= Pwave[1];out[8]=Twave[0];out[9]= Twave[1];
+							dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d \%d %d %d %d %d \%d \%d \%d \%d \n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave,Swave, Pwave[0], Pwave[1],Twave[0], Twave[1] );	
+							return 1;
+						}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d  Pwave not detected \%d %d %d %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave,Swave);
+							}
+					}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d    Twave not detected  %d \%d %d %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave);
 					}
-			}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d   else1 %d \%d %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1]);
-				}
-		}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d   \%d  else2\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+				}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d  \%d    Swave not detected  %d \%d %d %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)],Rpeak,Rwave[0],Rwave[1],Qwave);
+					}
+		*/	
+				
+			
+				
+				
+				
+		}else{ dbg(DBG_USR1, "\%d --> MMF: \%d  \%d   \%d  Rwave not detected\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
 				}
 	
 	}else{ 
-		dbg(DBG_USR1, "\%d --> MMF: \%d \%d   \%d   else3\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
+		dbg(DBG_USR1, "\%d --> MMF: \%d \%d   \%d  Rpeak not detected\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mf[(from)&(BUFLN-1)]);
 		
 	}
+	
 	(void)free(fp);
 	
 	return 0;
