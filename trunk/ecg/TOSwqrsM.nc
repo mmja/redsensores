@@ -122,7 +122,7 @@ implementation {
 		static unsigned int counter=0;
 		
 		input_d = (sample_t)testinput[counter++];
-		if(counter==2900){//2900){//163){
+		if(counter==241){//2900){//163){
 			counter=0;
 		}
 		
