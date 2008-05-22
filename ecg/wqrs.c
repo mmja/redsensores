@@ -571,8 +571,8 @@ void thresholding(int16_t* f){
 	int16_t *lista=(int16_t *)malloc((to-from)*sizeof(int16_t));
 	int16_t *valores;
 	int16_t *cantidad;
-	int16_t pos,n,i,j,min=abs(f[from&(BUFLN-1)]),max=abs(f[from&(BUFLN-1)]);
-	int8_t groups=5,processedVal=0;
+	int16_t pos,n,i,j,min=abs(f[from&(BUFLN-1)]),max=abs(f[from&(BUFLN-1)]), processedVal=0;
+	int8_t groups=1;
 	thr=0;thf=0;
 	
 	for(i=0;i<to-from;i++){
@@ -609,13 +609,16 @@ void thresholding(int16_t* f){
 		dbg(DBG_USR1, "%d  val: \%d    \%d\n",i,valores[i],cantidad[i]);
 	}
 	min=cantidad[(n/groups)];
-	for(i=(n/groups)-1;i>0 && !(min>=cantidad[i] && cantidad[i]<cantidad[i-1] &&processedVal>10);i--){
+	processedVal=cantidad[(n/groups)];
+	for(i=(n/groups)-1;i>0 && !(min>=cantidad[i] && cantidad[i]<cantidad[i-1] &&processedVal>20);i--){
 		processedVal+=cantidad[i];
 		min=cantidad[i]; 		
 	}
 	thr=valores[i];
 	min=cantidad[0];
-	for(i=1;i<(n/groups)+1 && !(min>=cantidad[i] && cantidad[i]<cantidad[i+1]);i++){
+	
+	
+	for(i=1;i<(n/groups)+1 && !(min>=cantidad[i] && cantidad[i]<cantidad[i+1] );i++){
 		
 		min=cantidad[i]; 		
 	}
