@@ -10,7 +10,8 @@ int16_t *B1,*B2;
 int16_t from=0,count=0, init=0,to=0;  //readed values number
 int16_t notnoise;
 int16_t thr,thf; //threshold
-
+int8_t initialize=1;
+int16_t distance;
 //para el paso 2
 int16_t *mf; //multiscale morphological transformed signal
 
@@ -273,7 +274,6 @@ int8_t rpeak_detection(int16_t *f){
     while(mf!=NULL && r<to){
 	    mt=mmt(r,f);
 	 
-	  
 	  //SI ES UN MINIMO UNICO
 	  	if(mmt(r-1,f)>mt && mt<mmt(r+1,f)){
 	    	
@@ -299,6 +299,7 @@ int8_t rpeak_detection(int16_t *f){
 	    	
 	    r++;    
     }
+  // 
 	return 0;
 	
 }
@@ -413,7 +414,7 @@ int8_t swave(int16_t *f){
    		//if(mmt(r,f)==mmt(right,f)) Swave=right;else Swave=r;	
 		//if(from==228) dbg(DBG_USR1, "%d ,abs(mmt(r,f)) ->  %d  thf: \%d    \n",Swave,abs(mmt(Swave,f)),thf);
 	// si los ha encontrado, crea Qwave y devuelve 0, sino devuelve 1
-    	if(r<count-s && (t1!=0))  
+    	if(r<to && (t1!=0))  
 		{	
 			
 			return 1;
@@ -526,7 +527,7 @@ int8_t twave(int16_t *f){
 	}
 	
 	 // si los ha encontrado, crea Rwave y devuelve 0, sino devuelve 1
-    if(right1< count-s && right2< count-s  &&(t1!=0))
+    if(right1< to && right2< to  &&(t1!=0))
     {		
 		 Twave[0]=right1;//onset
 		 Twave[1]=right2;//offset
@@ -584,9 +585,10 @@ void thresholding(int16_t* f){
 		
 		lista[i]=abs(f[(i+from)&(BUFLN-1)]);
 	}
-	
+	//dbg(DBG_USR1, "count %d to %d\n",to,from);
 	quicksort(lista,0,to-from);
 	
+
 	max=lista[to-from-1];
 	min=lista[0];
 	
@@ -653,15 +655,24 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 	detecinterval2=(int16_t)(0.40*FS + 0.5);
     s=FS*W-1;
 	buffer[count&(BUFLN-1)]=datum; //metemos el dato en el buffer
-	count++;
-	init=count-BUFLN;  
+	count=(count+1)&(BUFLN-1);
+	init=(count+1)&(BUFLN-1);  
 	from=init+NOPS*(1.5*LQRS*FS-1)/2;
-	to=count-NOPS*(1.5*LQRS*FS-1)/2;
-	
+	//to=count-NOPS*(1.5*LQRS*FS-1)/2;
+	to=from+distance;
 	if(out==NULL) out=(int16_t *)malloc(10*sizeof(int16_t));	
 		
 	//llenado inicial del bucle
-	if(count<BUFLN){
+	if(initialize && count==0){
+		
+			initialize=0;
+			to=BUFLN-NOPS*(1.5*LQRS*FS-1)/2;
+			distance=to-from;
+		
+	}
+	
+
+	if(initialize){
 		
 		return 0;
 	}
@@ -673,8 +684,8 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 	// Step 2: multiscale morphological transform 
 	
 	mmt(to,fp); //fijamos thr
-	
-	if((count&(BUFLN-1))==0){
+	if(count==0){
+		notnoise=0;
 		thresholding(mf);
 		dbg(DBG_USR1, "thr: \%d thf: \%d \n",thr,thf);
 		                                    
