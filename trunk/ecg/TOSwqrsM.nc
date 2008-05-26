@@ -122,7 +122,7 @@ implementation {
 		static unsigned int counter=0;
 		
 		input_d = (sample_t)testinput[counter++];
-		if(counter==771){//203){//163){//2900){//241){
+		if(counter==203){//771){//163){//2900){//241){
 			counter=0;
 		}
 		
