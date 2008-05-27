@@ -445,7 +445,7 @@ int8_t pwave(int16_t *f){
 	//Buscamos el onset de Pwave (1º maximo local) y el offset (2º maximo local)
 	
 	
-	if(Pwave==NULL) Pwave=(int16_t *)malloc(2*sizeof(int16_t));		
+	if(Pwave==NULL) Pwave=(int16_t *)malloc(3*sizeof(int16_t));		
 	//busca 1º maximo local a la izquierda (onset Pwave):   
 	l=Rwave[0];
 	while(!encontrado){
@@ -460,7 +460,9 @@ int8_t pwave(int16_t *f){
 		for(l=left1;l>=from && !(mmt(l+1,f)>=mmt(l,f) && mmt(l,f)<mmt(l-1,f) ) &&(t1!=0) ;l--,t1--);
 		//l=left1;
 		if(l<from || (t1==0))return 0;
-		if (abs(mmt(l,f))>thf && mmt(l,f)<thf){encontrado=1;}
+		if (abs(mmt(l,f))>thf && mmt(l,f)<thf){
+			Pwave[2]=l;
+			encontrado=1;}
 	}
 	//busca 2º maximo local a la izquierda(offset Pwave):   
 	offsetP=mmt(l,f);
@@ -497,7 +499,7 @@ int8_t twave(int16_t *f){
 	//Buscamos el onset de Twave (1º maximo local) y el offset (2º maximo local)
 	
 	
-	if(Twave==NULL) Twave=(int16_t *)malloc(2*sizeof(int16_t));	
+	if(Twave==NULL) Twave=(int16_t *)malloc(3*sizeof(int16_t));	
 	r=Rwave[1];	
 	//busca 1º maximo local a la derecha (onset Twave):   
 	while(!encontrado){
@@ -514,7 +516,9 @@ int8_t twave(int16_t *f){
 		//si no ha encontrado ningun minimo y se ha salido
 		if(r>=to || (t1==0))return 0;
 		//vemos si supera thf
-		if (abs(mmt(r,f))>thf && mmt(r,f)<thf ){encontrado=1;}
+		if (abs(mmt(r,f))>thf && mmt(r,f)<thf ){
+			Twave[2]=r;
+			encontrado=1;}
 	
 	}
 	
@@ -660,7 +664,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 	from=init+NOPS*(1.5*LQRS*FS-1)/2;
 	//to=count-NOPS*(1.5*LQRS*FS-1)/2;
 	to=from+distance;
-	if(out==NULL) out=(int16_t *)malloc(10*sizeof(int16_t));	
+	if(out==NULL) out=(int16_t *)malloc(12*sizeof(int16_t));	
 		
 	//llenado inicial del bucle
 	if(initialize && count==0){
@@ -731,9 +735,9 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 		
 			if(combine[3]==1)out[4]=Qwave; else out[4]=-1;
 			if(combine[2]==1)out[5]=Swave; else out[5]=-1;
-			if(combine[1]==1){  out[6]= Pwave[0];out[7]= Pwave[1];}else {out[6]= -1;out[7]=-1;}
-			if(combine[0]==1){out[8]=Twave[0];out[9]= Twave[1];}else {out[8]=-1;out[9]= -1;}
-			dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d \%d %d %d %d %d \%d \%d \%d \%d \n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)],out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9]);	
+			if(combine[1]==1){  out[6]= Pwave[0];out[7]= mmt(Pwave[2],fp);out[8]= Pwave[1];}else {out[6]= -1;out[7]=-1;out[8]=-1;}
+			if(combine[0]==1){out[9]=Twave[0];out[10]= mmt(Twave[2],fp);out[11]= Twave[1];}else {out[9]=-1;out[10]= -1;out[11]= -1;}
+			dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d \%d %d %d %d %d \%d \%d %d \%d \%d  %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)],out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9], out[10], out[11]);	
 
 			
 		/*	
