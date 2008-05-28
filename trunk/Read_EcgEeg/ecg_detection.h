@@ -3,7 +3,7 @@
 
 static int8_t sample_vflag;	/* if non-zero, last value returned by sample() was valid */	
 
-#define WFDB_INVALID_SAMPLE (-32768) /* samples from getvec or getframe with this value are not valid */
+#define WFDB_INVALID_SAMPLE (-32767) /* samples from getvec or getframe with this value are not valid */
 
 #define FS 200.0//150.0 //sampling frecuency Paso 2
 #define W 0.1 //wave width Paso 2 !!!!averiguarlo

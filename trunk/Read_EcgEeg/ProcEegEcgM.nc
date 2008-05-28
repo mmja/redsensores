@@ -1,4 +1,4 @@
-
+//make ucm_eeg_sta install.1
 /**
  *
  * @author Joaquin Recas
@@ -19,8 +19,8 @@ implementation {
 	uint8_t numData=0;
 	//uint8_t count=0;
 	
-	uint16_t _buffer,*buffer=&_buffer;
-	uint16_t _out,*out=&_out;
+	int16_t _buffer,*buffer=&_buffer;
+	int16_t _out,*out=&_out;
 	
 	//static sample_t get_sample_from_core(uint8_t channel);
 	static result_t send_result_to_host(uint16_t sample,uint32_t rdet,uint16_t fval);
@@ -42,12 +42,12 @@ implementation {
 
   task void processData(){
     
-    uint16_t sample,fval;
-	uint32_t res;
+    uint16_t sample=0,fval=0;
+	uint32_t res=0;
 	uint8_t i;
 	uint16_t data;
 	uint8_t ldata, mdata;
-	int32_t result;
+	int8_t result;
     //el sensor muestrea a una frecuencia de 1000hz, entonces coge un dato de cada 5 para muestrear a 200hz
     data = dataEegEcg[1]; //es el dato q le viene del sensor, tiene 10 posiciones y viene 5 datos del primer canal y del segundo alternados
     
@@ -97,44 +97,24 @@ implementation {
   }
   
   event result_t SendData.sendDone(TOS_MsgPtr pMsg, result_t success) {
-    //TOSH_TOGGLE_GREEN_LED_PIN();
+    TOSH_TOGGLE_GREEN_LED_PIN();
 
     return SUCCESS;
 	}
 	
-	/*static sample_t get_sample_from_core(uint8_t channel)
-	{
-		sample_t input_d;
-		static unsigned int counter=0;
-		static unsigned int counter2=0;
-		
-		if(channel==0){
-			input_d = (sample_t)testinput[counter++];
-			if(counter==163){
-				counter=0;
-			}
-		}
-		else{
-			input_d = (sample_t)testinput[counter2++];
-			if(counter2==163){
-				counter2=0;
-			}
-		}
-		
-		return(input_d);
-	}*/
+	
 	
 	static result_t send_result_to_host(uint16_t sample,uint32_t rdet,uint16_t fval)
 	{
 		// Send out result
 		if(whichPacket==0){
 			//no encuentra el campo s_addr
-			//datapck.s_addr = TOS_LOCAL_ADDRESS;
+			datapck.s_addr = TOS_LOCAL_ADDRESS;
 			whichPacket = 1;
 			return (call SendData.send(0, sizeof(AMdata), &datapck));
 		}
 		else{
-			//datapck2.s_addr = TOS_LOCAL_ADDRESS;
+			datapck2.s_addr = TOS_LOCAL_ADDRESS;
 			whichPacket = 0;
 			return (call SendData.send(0, sizeof(AMdata), &datapck2));
 		}
