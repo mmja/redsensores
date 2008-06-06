@@ -32,7 +32,7 @@ implementation {
   };
   
   uint16_t dataEegEcg[SAMPLES*PERIODS];
-  uint8_t indData=0;
+  uint16_t indData=0;
  // uint8_t seqNo=0;
   uint8_t whichPacket=0;
 
@@ -49,13 +49,19 @@ implementation {
 	uint16_t data;
 	uint8_t ldata, mdata;
 	int8_t result;
+	static uint8_t c=0;
+	//if(c==0){TOSH_SET_MISC1_PIN();c=1;}
+	//else {TOSH_CLR_MISC1_PIN();c=0;}
     //el sensor muestrea a una frecuencia de 1000hz, entonces coge un dato de cada 5 para muestrear a 200hz
     //data = dataEegEcg[1]; //es el dato q le viene del sensor, tiene 10 posiciones y viene 5 datos del primer canal y del segundo alternados
     data = get_sample_from_core();
     //detectamos qrs
+    TOSH_TOGGLE_GREEN_LED_PIN(); //TOSH_SET_MISC1_PIN();
+//TOSH_TOGGLE_GREEN_LED_PIN();
     result = ecg_detection(data,buffer,out); //c++;
     
     if(result==1){
+	     
 			//par obtener el valor de la señal en que se ha detectado se usa getsample(result,buffer), pero se supone que esto no es importante
 			//solo interesa el momento en que se detecta el qrs
 		  // dbg(DBG_USR1, " \%d  %d  [ %d , %d ]  %d  %d  [ \%d , %d ,\%d ]  [ \%d ,%d,  \%d ] \n",out[0],out[1],out[2],out[3],out[4],out[5],out[6],out[7],out[8],out[9], out[10], out[11]);
@@ -78,19 +84,21 @@ implementation {
 				}
 	  }	  
 	} 
+		//if(c==1){TOSH_CLR_MISC1_PIN();c=0;}
+
     
   }
 
   async event void ReadEegEcg.fired(uint16_t *pData){  //se llama cada vez q se leen dos datos (dos canales)
-   // uint8_t i;
+    uint8_t i;
     
-    //for(i=0;i<SAMPLES;i++)
-    //  dataEegEcg[indData++]=pData[i]; //pdata es un array de todos los canales que se esta leyendo
+    for(i=0;i<SAMPLES;i++)
+      dataEegEcg[indData++]=pData[i]; //pdata es un array de todos los canales que se esta leyendo
     
-    //if(indData==SAMPLES*PERIODS){
+    if(indData ==SAMPLES*PERIODS){
       post processData();
-    /*  indData=0;
-    }*/
+      indData=0;
+    }
     
   }
   
@@ -108,7 +116,7 @@ implementation {
 	}
   
   event result_t SendData.sendDone(TOS_MsgPtr pMsg, result_t success) {
-    TOSH_TOGGLE_GREEN_LED_PIN();
+   
 
     return SUCCESS;
 	}
