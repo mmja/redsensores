@@ -74,16 +74,22 @@ implementation {
 			if(result>=1){
 	     		
 			  	//ldata = (uint8_t) (out[i] & 0x00ff);  // lower 8bit
-			  	ldata=(uint8_t) (data & 0x00ff);
+			  	ldata=(uint8_t) (out[0] & 0x00ff);
 				//mdata = (uint8_t) ((out[i] & 0xff00) >> 8);  // higher 8bit
-				mdata==(uint8_t) ((data  & 0xff00) >> 8);
+				mdata==(uint8_t) ((out[0]  & 0xff00) >> 8);
 				if(whichPacket==0){
 					datapck.data[2*numData] = mdata;
 					datapck.data[2*numData+1] = ldata;
+					
+					datapck.data[2*numData+2] = result;
+					datapck.data[2*numData+3] = result;
 				}
 				else{
 					datapck2.data[2*numData] = mdata;
 					datapck2.data[2*numData+1] = ldata;
+					
+					datapck2.data[2*numData+2] = result;
+					datapck2.data[2*numData+3] = result;
 				}
 				numData = numData+1;
 				
