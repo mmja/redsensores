@@ -34,7 +34,7 @@ implementation {
 	
 	//int8_t _buffer,*buffer=&_buffer;
 	int8_t buffer[BUFLNZIP];
-	int8_t detection[12];
+	uint8_t detection[12];
 	int16_t amplitudes[3];
 	int16_t cycle=0;
 	int16_t c=0;
@@ -136,7 +136,7 @@ implementation {
 		static unsigned int counter=0;
 		
 		input_d = (sample_t)testinput[counter++];
-		if(counter==202){//771){//163){//2900){//241){
+		if(counter==119){//771){//163){//2900){//241){
 			counter=0;
 		}
 		
