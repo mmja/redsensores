@@ -9,7 +9,7 @@ int8_t initialize=1;
 int8_t aux1[BUFLNZIP];
 int8_t filled_buffer; //number of times since the last Rpeak detection that the buffer has been completely filled. 
 int16_t last_Rpeak; //saving the last rpeak instant
-int8_t hour=0,minute=0,second=0;
+uint8_t hour=0,minute=0,second=0, positions=0;
 int16_t out[12];
 int8_t combine[4];
 //**********************************************************************************************************
@@ -91,7 +91,7 @@ int16_t mmt(int16_t current,int8_t f[BUFLNZIP]){
 				if (descomprime(f,(t+BUFLN)%(BUFLN),0) > max) max = descomprime(f,(t+BUFLN)%(BUFLN),0);
 				if (descomprime(f,(t+BUFLN)%(BUFLN),0) < min) min = descomprime(f,(t+BUFLN)%(BUFLN),0);
 		}
-		return ((max+min-2*descomprime(f,(current+BUFLN)%(BUFLN),0)*10 / S ));	
+		return ((max+min-2*descomprime(f,(current+BUFLN)%(BUFLN),0)) *10 / S );	
 		
 }	
 	
@@ -329,11 +329,15 @@ void thresholding(int16_t n){
 	thf=25;//i*GROUPS;
 
 }
+//********************************  Timing  **********************************************
+
 void addSecond(){
 	
+	positions+=100;
 	second++;
-	if(second==60){
-		second=0;
+	if(positions==200){ second++; positions=0;}
+	if(second>=60){
+		second-=60;
 		minute++;
 		if(minute==60){
 			minute=0;
@@ -343,25 +347,29 @@ void addSecond(){
 		}	
 	}		
 }
-void giveTime(int16_t instant,int8_t ctime[12]){
+void giveTime(int16_t instant,uint8_t rtime[12]){
+	int16_t pos;
+	pos=positions;
+	rtime[2]=second;
+	rtime[1]=minute;
+	rtime[0]=hour;
 	
-	ctime[2]=second;
-	ctime[1]=minute;
-	ctime[0]=hour;
+	rtime[2]+=((instant+BUFLN)%BUFLN)/200;
 	
-	ctime[2]+=((instant-from+BUFLN)%BUFLN)/200;
-	ctime[4]=((instant-from+BUFLN)%BUFLN)%200;
-	if(ctime[2]>60){
-		ctime[2]=ctime[2]-60;
-		ctime[1]++;
-		if(ctime[1]==60){
-			ctime[1]=0;
-			ctime[0]++;
-			if(ctime[0]==24) ctime[0]=0;
+	pos+=((instant+BUFLN)%BUFLN)%200;
+	if(pos>=200){ rtime[2]++; pos-=200;}
+	rtime[3]=pos;
+	if(rtime[2]>=60){
+		rtime[2]=rtime[2]-60;
+		rtime[1]++;
+		if(rtime[1]==60){
+			rtime[1]=0;
+			rtime[0]++;
+			if(rtime[0]==24) rtime[0]=0;
 				
 		}	
 	}	
-		
+	//dbg(DBG_USR1, "****% d  % d   --->  %d : %d : %d : % d  -----  % d  , % d  *************\n",count, instant, rtime[0],rtime[1],rtime[2],rtime[3], ((instant+BUFLN)%BUFLN)/200,  ((instant+BUFLN)%BUFLN)%200 );		
 			
 }
 //********************************************************************************************
@@ -417,7 +425,7 @@ int8_t validation(int16_t rr){
 	//rule 6: between S - onset T should be isoelectric 	
 	
 	//correct qrs
-	return 0;
+	return 10;
 			
 }
 
@@ -437,6 +445,7 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 	                  
 	init=((count+1)+BUFLN)%(BUFLN);  
 	from=init+MARGIN;//+NOPS*(1.5*LQRS*FS-1)/2;
+	
 	//if(c==0){TOSH_SET_MISC1_PIN();c=1;}
 	//else {TOSH_CLR_MISC1_PIN();c=0;}
 	
@@ -446,13 +455,12 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 	}
 	if(initialize){	return 0;}
 	
-	//reloj
-    if(from==200){  //PONER EL RELOJ CADA 200 QUE AHORA ESTA MAL
-		addSecond();
-	}
+	
 
 	//Thresholding calculation
 	if(count==0){
+		//reloj -> SUMA 1seg y 50 ms 
+		addSecond();
 		filled_buffer++;
 		max=0;
 		notnoise=(notnoise+BUFLN)%(BUFLN);
@@ -464,18 +472,18 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 		}
 			
 		//thresholding(max);   
-		thr=115; thf=25;                              
+		thr=115; thf=25; 
+		//thr=650; thf=65;                              
 	}             
 	return 1;	
 }
 //****************************************************************************************************************************************
-int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],int8_t detection[12])
+int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],uint8_t detection[12])
 {  
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)
 
 	if(notnoise>=from){
-		//dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d\n",from%BUFLN,descomprime(buffer,(from+BUFLN)%(BUFLN),1),fp[(from+BUFLN)%(BUFLN)], mmt((from+BUFLN)%(BUFLN),fp));
-		//dbg(DBG_USR1, "\%d --> MMF: \%d \%d\n",from%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
+		//dbg(DBG_USR1, "\%d --> MMF: \%d \%d\n",(from)%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
 		return 0;	
 	}else notnoise=0;
 	
@@ -492,13 +500,14 @@ int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],int8_t detection[12])
 		return 1;		
 		
 	}else{
-		if(filled_buffer>2){ 
+		if(filled_buffer>1){ 
 			giveTime(count,detection);
-				
+			filled_buffer=0;	
 			//dbg(DBG_USR1, "****%d : %d : %d : % d *************\n",detection[0],detection[1],detection[2],detection[3]);	
 			return 7; //Too much time without Rpeak detection
 		}
-		//dbg(DBG_USR1, "\%d --> MMF:  \%d \%d Rpeak not detected\n",from%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp)); 
+		
+		//dbg(DBG_USR1, "\%d --> MMF:  \%d \%d Rpeak not detected\n",(from)%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp)); 
 		return 0;	
 	}
 	
@@ -509,18 +518,17 @@ int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],int8_t detection[12])
 }
 
 //****************************************************************************************************************************************
-int8_t ecg_detection_rwave(int8_t fp[BUFLNZIP],int8_t detection[12],int16_t amplitudes[3])
+int8_t ecg_detection_rwave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3])
 {  
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
 	
 	// Step 4: Rwave detection		
       	correct=rwave(fp,out);	
       	if (correct==1) {    
-      			out[0]=(out[0]+BUFLN)%(BUFLN); giveTime(count,detection);
-				out[1]=descomprime(fp,(out[0]+BUFLN)%(BUFLN),0);  amplitudes[0]=out[1];
-				out[2]=(out[2]+BUFLN)%(BUFLN);  detection[4]=(out[0]-out[2]+BUFLN)%(BUFLN);
-				out[3]=(out[3]+BUFLN)%(BUFLN);  detection[5]=(out[3]-out[0]+BUFLN)%(BUFLN);
-        	return 1;}
+      		//giveTime((out[0]+BUFLN)%BUFLN,detection);
+        	return 1;}	
+        //else{dbg(DBG_USR1, "\%d --> MMF:  \%d \%d Rwave not detected\n",(from)%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp)); 
+		//}
 
 
 	return 0;
@@ -528,7 +536,7 @@ int8_t ecg_detection_rwave(int8_t fp[BUFLNZIP],int8_t detection[12],int16_t ampl
 	
 }
 //****************************************************************************************************************************************
-int8_t ecg_detection_qwave(int8_t fp[BUFLNZIP],int8_t detection[12])
+int8_t ecg_detection_qwave(int8_t fp[BUFLNZIP],uint8_t detection[12])
 {  
 
 	      	//if(c==0){TOSH_SET_MISC1_PIN();c=1;}else {TOSH_CLR_MISC1_PIN();c=0;}
@@ -536,107 +544,105 @@ int8_t ecg_detection_qwave(int8_t fp[BUFLNZIP],int8_t detection[12])
 		// Step 5: Qwave detection
 				notnoise=out[3]; 
 				combine[3]=qwave(fp,out);
-				if(combine[3]==1){
-					out[4]=(out[4]+BUFLN)%(BUFLN); 
-					detection[6]=(out[0]-out[4]+BUFLN)%(BUFLN);
-				}else out[4]=0;
-	
-
 	return 1;
 	
 	
 }
 
 //****************************************************************************************************************************************
-int8_t ecg_detection_swave(int8_t fp[BUFLNZIP],int8_t detection[12])
-{  
-
-
-	      
+int8_t ecg_detection_swave(int8_t fp[BUFLNZIP],uint8_t detection[12])
+{        
 		// Step 6: Swave detection
-				combine[2]= swave(fp,out);
+				combine[2]= swave(fp,out);	
+
+	return 1;
+	
+	
+}
+//****************************************************************************************************************************************
+int8_t ecg_detection_pwave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3])
+{  
+	// Step 7: onset and offset, Pwave and Twave detection
+	combine[1]=pwave(fp,out);
+				
+				
+	if(combine[1]==1){return 1;}else {
+		//dbg(DBG_USR1, "****888888888888888888888888888888888888888888**********  \%d \%d \%d %d %d  ***\n",out[0],out[2],out[3],out[4],out[5] );	
+		return 8; //Pwave not detected
+	}
+	return 0;
+				
+				
+}
+
+
+//****************************************************************************************************************************************
+
+int8_t ecg_detection_twave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3])
+{  
+	
+		// Step 7: onset and offset, Pwave and Twave detection
+		combine[0]=twave(fp,out);
+	
+				
+		if(combine[0]==1){
+			out[9]=(out[9]+BUFLN)%(BUFLN);  detection[10]=(out[9]-out[0]+BUFLN)%(BUFLN);
+			out[10]=descomprime(fp,(out[10]+BUFLN)%(BUFLN),0);  amplitudes[2]=out[10];		
+			out[11]= (out[11]+BUFLN)%(BUFLN); detection[11]=(out[11]-out[0]+BUFLN)%(BUFLN);
+			return 1;	
+				
+		}else {out[9]=0;out[10]= 0;out[11]= 0; 
+			if(combine[0]==2 || (from+10+BUFLN)%BUFLN > out[6]){ 
+			//dbg(DBG_USR1, "****9999999999999999999999999999999 ************  \%d \%d \%d %d %d  %d %d***\n",out[0],out[2],out[3],out[4],out[5],out[6],out[8] );
+			return 9; //Twave not detected
+			}else {notnoise=(from+10); }
+					
+		}
+				
+				
+				return 0;
+				
+}
+//****************************************************************************************************************************************
+int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3])
+{  
+	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
+
+				out[0]=(out[0]+BUFLN)%(BUFLN); giveTime(count,detection);
+				out[1]=descomprime(fp,(out[0]+BUFLN)%(BUFLN),0);  amplitudes[0]=out[1];
+				out[2]=(out[2]+BUFLN)%(BUFLN);  detection[4]=(out[0]-out[2]+BUFLN)%(BUFLN);
+				out[3]=(out[3]+BUFLN)%(BUFLN);  detection[5]=(out[3]-out[0]+BUFLN)%(BUFLN);
+				
+				if(combine[3]==1){
+					out[4]=(out[4]+BUFLN)%(BUFLN); 
+					detection[6]=(out[0]-out[4]+BUFLN)%(BUFLN);
+				}else out[4]=0;
 				if(combine[2]==1){
 					out[5]=(out[5]+BUFLN)%(BUFLN);
 					detection[7]=(out[5]-out[0]+BUFLN)%(BUFLN);
 				} else out[5]=0;
 
-	return 1;
-	
-	
-}
-//****************************************************************************************************************************************
-int8_t ecg_detection_pwave(int8_t fp[BUFLNZIP],int8_t detection[12],int16_t amplitudes[3])
-{  
-	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
-
-		// Step 7: onset and offset, Pwave and Twave detection
-	combine[1]=pwave(fp,out);
-				
 				
 				if(combine[1]==1){
-					out[6]= (out[6]+BUFLN)%(BUFLN);  detection[8]=(out[0]-out[6]+BUFLN)%(BUFLN);
-					out[7]=descomprime(fp,(out[7]+BUFLN)%(BUFLN),0); amplitudes[1]=out[7];					
-					out[8]=(out[8]+BUFLN)%(BUFLN); detection[9]=(out[0]-out[8]+BUFLN)%(BUFLN);
-					return 1;
-					
-				}else {
-					out[6]= 0;out[7]=0;out[8]=0;
-				//dbg(DBG_USR1, "****888888888888888888888888888888888888888888 *************\n");	
-					return 8; //Pwave not detected
-				}
-				return 0;
-				
-				
-}
-
-
-//****************************************************************************************************************************************
-
-int8_t ecg_detection_twave(int8_t fp[BUFLNZIP],int8_t detection[12],int16_t amplitudes[3])
-{  
-	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
-
-		// Step 7: onset and offset, Pwave and Twave detection
-		combine[0]=twave(fp,out);
-	
-				
-				if(combine[0]==1){
-					out[9]=(out[9]+BUFLN)%(BUFLN);  detection[10]=(out[9]-out[0]+BUFLN)%(BUFLN);
-					out[10]=descomprime(fp,(out[10]+BUFLN)%(BUFLN),0);  amplitudes[2]=out[10];		
-					out[11]= (out[11]+BUFLN)%(BUFLN); detection[11]=(out[11]-out[0]+BUFLN)%(BUFLN);
-					return 1;	
-				
-				}else {out[9]=0;out[10]= 0;out[11]= 0; 
-					if(combine[0]==2){ 
-						//dbg(DBG_USR1, "****9999999999999999999999999999999 *************\n");	
-						return 9; //Twave not detected
-					}else notnoise=(from+10); 
-					
-				}
-				
-				
-				return 0;
-				
-}
-//****************************************************************************************************************************************
-int8_t ecg_detection_valid()
-{  
-	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
-
+				out[6]= (out[6]+BUFLN)%(BUFLN);  detection[8]=(out[0]-out[6]+BUFLN)%(BUFLN);
+				out[7]=descomprime(fp,(out[7]+BUFLN)%(BUFLN),0); amplitudes[1]=out[7];					
+				out[8]=(out[8]+BUFLN)%(BUFLN); detection[9]=(out[0]-out[8]+BUFLN)%(BUFLN);
 		
+				}else {	out[6]= 0;out[7]=0;out[8]=0;}
+
 				if(combine[0]==1){
 					if(filled_buffer==0)correct=validation((out[0]-last_Rpeak+BUFLN)%BUFLN);
 					else correct=validation(((out[0]-last_Rpeak+BUFLN)%BUFLN)+(filled_buffer-1)*BUFLN);
 					
 					filled_buffer=0;
 					last_Rpeak=out[0];
-				//	dbg(DBG_USR1, "**** \%d \%d \%d %d %d %d %d \%d \%d %d \%d \%d *************\n",correct,correct,correct,correct,correct,correct,correct,correct,correct,correct,correct,correct);	
-				//dbg(DBG_USR1, "\%d --> MMF:  \%d \%d \%d %d %d %d %d \%d \%d %d \%d \%d  %d\n",from%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp),out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9], out[10], out[11]);	
+					//dbg(DBG_USR1, "**** \%d \%d \%d %d %d %d %d \%d \%d %d \%d \%d *************\n",correct,correct,correct,correct,correct,correct,correct,correct,correct,correct,correct,correct);	
+				//dbg(DBG_USR1, "\%d --> MMF:  \%d \%d \%d %d %d %d %d \%d \%d %d \%d \%d  %d\n",(from)%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp),out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9], out[10], out[11]);	
 			       // if(correct==3) TOSH_TOGGLE_GREEN_LED_PIN();
 						
 				    	return correct;
 				}
-				//else dbg(DBG_USR1, "\%d --> MMF:  \%d \%d \%d %d %d %d %d \%d \%d %d \%d \%d  %d\n",from%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp),out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9], out[10], out[11]);	
+				//else dbg(DBG_USR1, " hola \%d --> MMF:  \%d \%d \%d %d %d %d %d \%d \%d %d \%d \%d  %d\n",(from)%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp),out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9], out[10], out[11]);	
 				return 0;
 				
 }
