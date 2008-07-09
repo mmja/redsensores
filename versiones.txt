@@ -1,0 +1,9 @@
+ecg_antes de portar: programa sin optimizaciones, con punteros
+ecg_funcionando_optimizado: programa con menos variables, y todos los punteros en array
+ecg_comp_desc: programa optimizado con operaciones de comprime y descomprime
+ecg_sin_filtro: programa optimizado sin la parte del filtro
+
+ecg_completo1.0: programa sin filtro con las comparaciones para las reglas
+ecg_completo1.1: programa sin filtro, con reglas, dividido en pasos
+ecg_completo1.2: programa dividido en paso pero cogiendo datos en cada paso
+ecg_completo1.3: programa con thresholding
