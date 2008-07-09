@@ -167,9 +167,14 @@ main(int argc, char **argv)
     WFDB_Siginfo *s;
     WFDB_Time from = 0L, next_minute, now, spm, t, tj, tpq, to = 0L, tt, t1;
     static int gvmode = 0;
+    
     char *prog_name();
     void help();
 
+    //******************* contador para imprimir a la frecuencia deseada
+    static int cdat=0;
+    //************************************************************
+    
     pname = prog_name(argv[0]);
 
    
@@ -364,7 +369,11 @@ main(int argc, char **argv)
     for (t = from; t < to || (to == 0L && sample_valid()); t++) {
 	static int learning = 1, T1;
 	//printf("dato: %d t: %d --> ",sample(sig,t),t);
-	printf("%d,",sample(sig,t));
+	//********************************* imprime los datos***************
+	if(cdat!=5){cdat++;	printf("%d,",sample(sig,t));}
+	else { cdat=0;}
+	//********************************************************************
+	
 	if (learning) {
 	    if (t > t1) {
 		learning = 0;
