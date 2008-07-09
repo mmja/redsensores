@@ -698,7 +698,10 @@ int8_t wqrs(int16_t datum, int8_t buffer[BUFLNZIP],int16_t out[12])
 	
 	// Step 1: morphological filtering for noise reduction and baseline correction
 	mmf(buffer,fp);
-	//dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d\n",from%BUFLN,descomprime(buffer,(from+BUFLN)%(BUFLN),1),descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
+	//imprime 1
+	dbg(DBG_USR1, "\%d %d\n",from%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0));
+	//imprime 2
+	//dbg(DBG_USR1, "%d, ",descomprime(fp,(from+BUFLN)%(BUFLN),0));
 		
 	//comprime(bf,(from+BUFLN)%(BUFLN),fp[(from+BUFLN)%(BUFLN)]);
     //descomprime(bf,(from+BUFLN)%(BUFLN));
@@ -709,7 +712,7 @@ int8_t wqrs(int16_t datum, int8_t buffer[BUFLNZIP],int16_t out[12])
 	// Step 2: multiscale morphological transform 
 	
 	
-	//Thresholding calculation
+	/*//Thresholding calculation
 	if(count==0){
 		max=0;
 		notnoise=(notnoise+BUFLN)%(BUFLN);
@@ -787,7 +790,7 @@ int8_t wqrs(int16_t datum, int8_t buffer[BUFLNZIP],int16_t out[12])
 		//dbg(DBG_USR1, "\%d --> MMF: \%d \%d   \%d  Rpeak not detected\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mmt((from)&(BUFLN-1),fp));	
 	}
 	
-	//(void)free(fp);
+	//(void)free(fp);*/
 	return 0;
 }
 
