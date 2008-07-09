@@ -370,8 +370,14 @@ main(int argc, char **argv)
 	static int learning = 1, T1;
 	//printf("dato: %d t: %d --> ",sample(sig,t),t);
 	//********************************* imprime los datos***************
+	//*
+	//*
+	//*
 	if(cdat!=5){cdat++;	printf("%d,",sample(sig,t));}
 	else { cdat=0;}
+	//*
+	//*
+	//*
 	//********************************************************************
 	
 	if (learning) {
