@@ -373,7 +373,7 @@ main(int argc, char **argv)
 	//*
 	//*
 	//*
-	if(cdat!=5){cdat++;	printf("%d,",sample(sig,t));}
+	if(cdat!=5 && t< 500){cdat++;	printf("%d,",sample(sig,t));}
 	else { cdat=0;}
 	//*
 	//*
@@ -469,7 +469,7 @@ main(int argc, char **argv)
 	/* Keep track of progress by printing a dot for each minute analyzed */
 	if (t >= next_minute) {
 	    next_minute += spm;
-	    (void)fprintf(stderr, ".");
+	    //(void)fprintf(stderr, ".");
 	    (void)fflush(stderr);
 	    if (++minutes >= 60) {
 		(void)fprintf(stderr, "\n");
