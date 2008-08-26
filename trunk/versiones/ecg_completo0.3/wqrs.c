@@ -1,33 +1,24 @@
+/**********************************************************************************************************
+/ VERSION 0.3 - Monica Jimenez, Laura Gutierrez
+/ Buffers comprimidos. Metodos para descomprimirlos.
+/ Optimizacion del thresholding
+/ No soportada por el Nodo (insuficiente tiempo para procesar los datos).                    
+/***********************************************************************************************************/
+
 #include <math.h>
 #include "wqrs.h"
-//VARIABLES
 
-//int16_t f0[BUFLN];//Fo= señal original
-int16_t count=0, init=0,  from=0;//,to=0,,;  //readed values number
+int16_t count=0, init=0,  from=0;//readed values number
 int16_t notnoise=0;
 int16_t thr=0,thf=0; //threshold
 int8_t initialize=1;
 int8_t aux1[BUFLNZIP],aux2[BUFLNZIP];
-//int16_t outecg[12];
-
-//int16_t Rpeak=0;//Paso 3 Rpeak= Local minimo entre Thf y Thr. 
-//int16_t Rwave[2];//Paso 4 (entre el primer max local a la izq y a la derecha de Rpeak)
-//int16_t Qwave=0;//Paso 5 (puede que no se detecte)1º minimo local a la izq de Rwave
-//int16_t Swave=0;//Paso 6 (puede que no se detecte)1ºminimo local desde la drecha de la parte positiva de Rwave
-//Paso 7: Onset y Offset de Pwave y Twave (puede que no se detecte)
-//int16_t Pwave[3];// los 2 primeros maximos locales desde la izq de Pwave
-//int16_t Twave[3];// los 2 primeros maximos locales desde la dcha de Twave
-
 int8_t fp[BUFLNZIP];//F= señal después del preprocesado
-
-//int16_t s; //window length of (2s+1) samples, s<W*Fs, para el Paso 2 (mmt)
-//int32_t detecinterval,detecinterval2; // detection interval= 0,12 segundos, se usa en el Paso 5 y 6 (Qwave y Swave)
-//int16_t lista[distance]; //para calcular thresholding
 
 
 //**********************************************************************************************************
 void comprime(int8_t f[BUFLNZIP],int16_t p,int16_t data){
-	//int8_t comp[(BUFLN*1.5)+1];
+
 
 	int8_t data_mod;
 	int16_t inter;
@@ -61,10 +52,7 @@ int16_t descomprime(int8_t f[BUFLNZIP],int16_t p,int8_t isBuffer){
 		}else{
 			inter=f[p+p/2]<<4;
 			out=inter<<4;
-			//if((f[p+p/2]&0x08)!=8){	
-			//	aux=f[p+p/2+1]&0x00ff;}
-			//else{ 
-			//	aux=f[p+p/2+1];}
+		
 			aux=f[p+p/2+1]&0x00ff;
 			out=out|aux;
 	
@@ -83,27 +71,10 @@ int16_t descomprime(int8_t f[BUFLNZIP],int16_t p,int8_t isBuffer){
 	
 		}
 	}
-	   //dbg(DBG_USR1, "\%d val: %d %d \n",p,fp[p],out);   
+	  
 	return out;
 }
-/*int16_t descomprimeBuffer(uint8_t f[BUFLNZIP],int16_t p){
-	int16_t out;
-	int8_t inter;
-	if(p%2==0){
-		out=f[p+p/2];
-		out=out<<4;
-		inter=(f[p+p/2+1]>>4)&0x0f;
-		out=out|inter;
-		
-	}else{
-		out=(f[p+p/2]&0x0f);
-		out=out<<8;
-		out=out|f[p+p/2+1];
 
-	}
-	   //dbg(DBG_USR1, "\%d val:  %d\n",p,out);   
-	return out;
-}*/
 //********************************************************************************************
 // step1: morphological filtering for noise reduction and baseline correction
 //********************************************************************************************
@@ -114,37 +85,26 @@ void erosion(int8_t f[BUFLNZIP], int16_t lon,int8_t B[lon],int8_t result[BUFLNZI
 	int16_t i=0;
 	int16_t j=0;
 	int16_t min=0;
-	//int16_t *result;
-		
-	//result =(int16_t *)malloc(BUFLN*sizeof(int16_t));
-	//if(result!=NULL){
+
 		for(i=0;i<(lon-1)/2;i++){
-			//result[(init+i+BUFLN)%(BUFLN)]=f[(init+i+BUFLN)%(BUFLN)];	
+			
 			comprime(result,(init+i+BUFLN)%(BUFLN),descomprime(f,(init+i+BUFLN)%(BUFLN),isBuffer));
 		}
 		for(i=(lon-1)/2;i<(BUFLN-(lon+1)/2);i++){
-			//min=f[(init+i-(lon-1)/2 +BUFLN)%(BUFLN)]-B[0];
+			
 			min=descomprime(f,(init+i-(lon-1)/2 +BUFLN)%(BUFLN),isBuffer) - B[0]; 
 			for(j=1;j<lon;j++){
-				//if(min > (f[(init+i-((lon-1)/2)+j+BUFLN)%(BUFLN)] - B[j%lon])) min= f[(init+i-(lon-1)/2+j+BUFLN)%(BUFLN)] - B[j%lon];
 				if(min > (descomprime(f,(init+i-((lon-1)/2)+j+BUFLN)%(BUFLN),isBuffer) - B[j%lon]))
 						 min= descomprime(f,(init+i-((lon-1)/2)+j+BUFLN)%(BUFLN),isBuffer) - B[j%lon];
 			}
-			//result[(init+i+BUFLN)%(BUFLN)]=min;	
+			
 			comprime(result,(init+i+BUFLN)%(BUFLN),min);
-			//if((init+i+BUFLN)%(BUFLN)==227 && from%BUFLN==227)
-			//dbg(DBG_USR1, "%d  val: \%d %d  \n",from%BUFLN,result[from%BUFLN+(from%BUFLN)/2],result[from%BUFLN+(from%BUFLN)/2 +1]); 
-		}
+			}
 		for(i=(BUFLN-(lon+1)/2);i<BUFLN;i++){
-			//result[(init+i+BUFLN)%(BUFLN)]=f[(init+i+BUFLN)%(BUFLN)];	
+			
 			comprime(result,(init+i+BUFLN)%(BUFLN),descomprime(f,(init+i+BUFLN)%(BUFLN),isBuffer));
 		}
-	/*	return result;			
-	}	else {
-		//dbg(DBG_USR1, "Erosion: Not enough memory\n"); 
-			return NULL;	
-			}
-	*/
+	
 	
 	
 }
@@ -152,101 +112,68 @@ void erosion(int8_t f[BUFLNZIP], int16_t lon,int8_t B[lon],int8_t result[BUFLNZI
 void dilation(int8_t f[BUFLNZIP], int16_t lon,int8_t B[lon],int8_t result[BUFLNZIP],int8_t isBuffer){
 	int16_t i=0,j=0;
 	int16_t max=0;
-	/*int16_t *result;
-	
-	result =(int16_t *)malloc(BUFLN*sizeof(int16_t));
-	if(result!=NULL){	
-	*/	for(i=0;i<(lon-1)/2;i++){
-			//result[(init+i+BUFLN)%(BUFLN)]=f[(init+i+BUFLN)%(BUFLN)];	
+	for(i=0;i<(lon-1)/2;i++){
+			
 			comprime(result,(init+i+BUFLN)%(BUFLN),descomprime(f,(init+i+BUFLN)%(BUFLN),isBuffer));
 		}
 		for(i=(lon-1)/2;i<BUFLN-(lon+1)/2;i++){
-			//max=f[(init+i-(lon-1)/2+BUFLN)%(BUFLN)]+ B[0];
+		
 			max=descomprime(f,(init+i-(lon-1)/2 +BUFLN)%(BUFLN),isBuffer) - B[0]; 
 			for(j=1;j<lon;j++){
-				//if(max < (f[(init+i-((lon-1)/2)+j+BUFLN)%(BUFLN)] + B[j%lon])) max=f[(init+i-((lon-1)/2)+j+BUFLN)%(BUFLN)] + B[j%lon];
 				if(max < (descomprime(f,(init+i-((lon-1)/2)+j+BUFLN)%(BUFLN),isBuffer) + B[j%lon]))
 						 max= descomprime(f,(init+i-((lon-1)/2)+j+BUFLN)%(BUFLN),isBuffer) + B[j%lon];
 			}
-			//result[(init+i+BUFLN)%(BUFLN)]=max;
+			
 			comprime(result,(init+i+BUFLN)%(BUFLN),max);
 		}
 		for(i=(BUFLN-(lon+1)/2);i<BUFLN;i++){
-			//result[(init+i+BUFLN)%(BUFLN)]=f[(init+i+BUFLN)%(BUFLN)];	
+			
 			comprime(result,(init+i+BUFLN)%(BUFLN),descomprime(f,(init+i+BUFLN)%(BUFLN),isBuffer));
 		}
-	/*	return result;
-	}else {
-		
-		//dbg(DBG_USR1, "Dilation: Not enough memory\n");
-		return NULL;	
-	}*/
 	
 }
 
 void opening(int8_t f[BUFLNZIP], int16_t lon,int8_t B[lon],int8_t sol[BUFLNZIP],int8_t isBuffer){
-	//int16_t ero_out[BUFLN];
+
 	erosion(f,lon,B, aux1,isBuffer);
 	dilation(aux1,lon,B,sol,isBuffer);
-	//(void)free(aux);
-	//return sol;	
+	
 }
 
 void closing(int8_t f[BUFLNZIP], int16_t lon,int8_t B[lon],int8_t sol[BUFLNZIP],int8_t isBuffer){
-	//int16_t dil_out[BUFLN];
+
 	dilation(f,lon,B,aux1,isBuffer);
 	erosion(aux1,lon,B,sol,isBuffer);
-	//(void)free(aux);
-	//return sol;	
+
 		
 }
 
 //**************************************************************************************
 void mmf(int8_t f[BUFLNZIP],int8_t sol[BUFLNZIP]){
 	int16_t i=0;
-	//int16_t fb[BUFLN];//Fb=baseline correction
-	//int16_t res[BUFLN];//=(int16_t *)malloc(BUFLN*sizeof(int16_t)),*sol=(int16_t *)malloc(BUFLN*sizeof(int16_t));
-	//int16_t first[BUFLN],second[BUFLN];
-    //int16_t aux[BUFLN];
-
+	
 	//matrix initialization
 	
 	//static int16_t Bo[lo],Bc[lc];
 	//B, Bo (apertura) y Bc (cierre) = se seleccionan basándose en las propiedades de las ondas características de ECG (elementos estructurales)
 	static int8_t Bc[l1];//,B2[l1];
-	//Bo=(int16_t*)malloc(lo*sizeof(int16_t));
-	//Bc=(int16_t*)malloc(lc*sizeof(int16_t));
+	
 	for(i=0;i<l1;i++){
 		Bc[i]=0;	
 	}
-	/*for(i=0;i<lo;i++){
-		Bo[i]=0;	
-	}*/
-	//The structuring element used for noise suppression has length 5 and values of (0, 1, 5, 1, 0).
-	//B1=(int16_t*)malloc(l1*sizeof(int16_t));
-//	B1[0]=0;  B1[1]=1;   B1[2]=5;   B1[3]=1;   B1[4]=0;
-	//B2=(int16_t*)malloc(l1*sizeof(int16_t));
-	//for(i=0;i<l1;i++){
-//		B2[i]=0;	
-//	}
+	
 		
 	//baseline correction
 	opening(f,lo,Bc,aux2,1);
 	closing(aux2,lc,Bc,aux2,1);
-	//(void)free(aux);
 	
 	//noise suppresion
 	for(i=0;i<BUFLN;i++){
-		
-		//aux2[i]=f[i]-aux2[i];
-		
 		comprime(aux2,i,descomprime(f,i,1)	- descomprime(aux2,i,1));
-		//dbg(DBG_USR1, "%d  val: \%d   \%d  \%d\n",i,descomprime(aux2,i,0),descomprime(f,i,1),b2); 	
+			
 	}
 	
-	
-	
-		Bc[0]=0;  Bc[1]=1;   Bc[2]=5;   Bc[3]=1;   Bc[4]=0;
+	Bc[0]=0;  Bc[1]=1;   Bc[2]=5;   Bc[3]=1;   Bc[4]=0;
 	//formula 2
 	dilation(aux2,l1,Bc,aux1,0);
 	
@@ -254,46 +181,20 @@ void mmf(int8_t f[BUFLNZIP],int8_t sol[BUFLNZIP]){
 		Bc[i]=0;	
 	}
 	erosion(aux1,l1,Bc,sol,0); //first
-	//(void)free(aux);
+
 	
 		Bc[0]=0;  Bc[1]=1;   Bc[2]=5;   Bc[3]=1;   Bc[4]=0;
 	erosion(aux2,l1,Bc,aux1,0);
 	for(i=0;i<l1;i++){
 		Bc[i]=0;	
 	}
-	//dbg(DBG_USR1, "%d  val: \%d    %d\n",from%BUFLN,descomprime(aux2,from%BUFLN,0),descomprime(aux1,from%BUFLN,0)); 
 	dilation(aux1,l1,Bc,aux2,0); //second
-	//(void)free(aux);
+
 	
-	//formula 1
-	/*aux=opening(res,B1,l1);
-	first=closing(aux,B1,l1);
-	(void)free(aux);
-	
-	aux=closing(res,B1,l1);
-	second=opening(aux,B1,l1);
-	(void)free(aux);
-	*/
-	//first=closing(opening(res,B1,l1),B1,l1);
-	//second=opening(closing(res,B1,l1),B1,l1);
-	
-	for(i=0;i<BUFLN;i++){
-		//sol[i]=(sol[i]+aux2[i])/2;	
+	for(i=0;i<BUFLN;i++){	
 		comprime(sol,i,(descomprime(sol,i,0) + descomprime(aux2,i,0))/2);
 	
 	}
-	//dbg(DBG_USR1, "%d  val: \%d   \%d  %d\n",from%BUFLN,b2,descomprime(aux2,from%BUFLN,0),descomprime(sol,from%BUFLN,0)); 
-	
-	/*
-	(void)free(fb);
-	(void)free(first);
-	(void)free(second);
-	(void)free(Bo);
-	(void)free(Bc); 
-	(void)free(B1);
-	(void)free(res);
-	*/
-	//return sol;
 	
 }
 
@@ -301,43 +202,21 @@ void mmf(int8_t f[BUFLNZIP],int8_t sol[BUFLNZIP]){
 // step2: multiscale morphological transform 
 //*******************************************************************************************
 int16_t mmt(int16_t current,int8_t f[BUFLNZIP]){
-	
-	//int16_t i;
+
 	int16_t max=0;
 		int16_t min=0;
 		int16_t t;
-		
-	//static int16_t tt=0;
-	/*if (mf == NULL) {
-		//mf = (int16_t *)malloc(BUFLN*sizeof(int16_t));		
-		for(i=0;i<s;i++){
-			mf[(i+BUFLN)%(BUFLN)]=0;	
-			
-		}
-		tt=s;
-    }*/
-    
+	
     if ((current < (from)) && (current > (from)+distance) ) {
 		
 	    return -1;
     }
 	
-    
-    //while(tt<=current){
-		
 		for (t = current-s; t <= current+s; t++){ //find the maximum and minimum local values 
-				
-			//if((aux=getsample(t,f))!= WFDB_INVALID_SAMPLE){
-				//if (f[(t+BUFLN)%(BUFLN)] > max) max = f[(t+BUFLN)%(BUFLN)]; 
-				if (descomprime(f,(t+BUFLN)%(BUFLN),0) > max) max = descomprime(f,(t+BUFLN)%(BUFLN),0);
-				//if (f[(t+BUFLN)%(BUFLN)] < min) min = f[(t+BUFLN)%(BUFLN)];
-				if (descomprime(f,(t+BUFLN)%(BUFLN),0) < min) min = descomprime(f,(t+BUFLN)%(BUFLN),0);
-			//}
-			
-		}
 		
-
-    //return ((max+min-2*f[(current+BUFLN)%(BUFLN)])*10 / s);
+				if (descomprime(f,(t+BUFLN)%(BUFLN),0) > max) max = descomprime(f,(t+BUFLN)%(BUFLN),0);
+				if (descomprime(f,(t+BUFLN)%(BUFLN),0) < min) min = descomprime(f,(t+BUFLN)%(BUFLN),0);			
+		}
 	return ((max+min-2*descomprime(f,(current+BUFLN)%(BUFLN),0) )*10 / s);
 
 	
@@ -384,7 +263,7 @@ int8_t rwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	int16_t left_local_max;
 	int16_t r,l;//posiciones right y left
 	int16_t right,left;//verdadera posicion del maximo hacia la dcha
-	//if(Rwave==NULL) Rwave=(int16_t *)malloc(2*sizeof(int16_t));		
+		
 	right=-1;
 	left=-1;
 	//From Rpeak:   	
@@ -455,9 +334,7 @@ int8_t swave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 //********************************************************************************************
 int8_t pwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	
-	//Pwave=Buscamos 2 maximos locales desde Qwave hacia la izq:
 	int16_t offsetP;
-	
 	int16_t left1=0;	//posicion 1º max (onset)
 	int16_t left2=0;	//posicion 2º max(offset)
 	int16_t onsetP=0;
@@ -466,8 +343,6 @@ int8_t pwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	int8_t	t1;// tienen que tradar menos de 0,12 seg en encontrar el minimo
 	t1 = detecinterval2;
 	
-	
-	//if(Pwave==NULL) Pwave=(int16_t *)malloc(3*sizeof(int16_t));		
 	//busca 1º maximo local a la izquierda (onset Pwave):   
 	l=outecg[2];
 	while(!encontrado){
@@ -478,7 +353,6 @@ int8_t pwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 		}
 		//busca minimo intermedio que supere thf
 		for(l=left1;l>=(from) && !(mmt(l+1,f)>=mmt(l,f) && mmt(l,f)<mmt(l-1,f) ) &&(t1!=0) ;l--,t1--);
-		//l=left1;
 		if(l<(from) || (t1==0))return 0;
 		if (abs(mmt(l,f))>thf && mmt(l,f)<thf){
 			outecg[7]=l;
@@ -512,7 +386,6 @@ int8_t twave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	int8_t	t1;// tienen que tradar menos de 0,12 seg en encontrar el minimo
 	t1 = detecinterval2;
 	
-	//if(Twave==NULL) Twave=(int16_t *)malloc(3*sizeof(int16_t));	
 	r=outecg[3];	
 	//busca 1º maximo local a la derecha (onset Twave):   
 	while(!encontrado){
@@ -551,109 +424,44 @@ int8_t twave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 //*******************************************************************************************
 //adaptive thresholding
 //******************************************************************************************
-/*void quicksort(int16_t inf,int16_t sup){
-	
-	int16_t pivote = aux1[sup];
-    int16_t i = inf;
-    int16_t j = sup - 1;
-    int8_t cont = 1;
- 	int16_t temp;
-    // Verificamos que no se crucen los límites
-    if (inf >= sup)
-          return;
- 
-    //  Clasificamos la sublista
-    while (cont){
-         while (i<sup &&aux1[i] < pivote) { ++i; }
-         while (j>inf && aux1[j] > pivote ) { --j; }
-         if (i<jaux1[i] > aux1[j]){
-              temp = aux1[i];
-              aux1[i] = aux1[j];
-              aux1[j] = temp;
-              ++i;--j;
-     	}else
-              cont = 0;
-	}
- 
-   // Copiamos el pivote en su posición final
-    temp = aux1[i];
-    aux1[i] = aux1[sup];
-    aux1[sup] = temp;
- 
-   // Aplicamos el procedimiento recursivamente a cada sublista
-    quicksort ( inf, i - 1);
-    quicksort ( i + 1, sup);
 
-}*/
 void thresholding(int16_t n){
 	
-	//=(int16_t *)malloc((to-(from))*sizeof(int16_t));
 	
 	int16_t i, processedVal=0,aux;
-	//int8_t groups=5;
-	//int16_t valores[((n/groups))];
-	//int16_t cantidad[((n/groups))];
+
 	thr=0;thf=0;
 	
 	for(i=0;i<(n/groups)+1;i++){
-		//aux2[i]=0;
 		comprime(aux2,i,0);
 		}
-	//n=max-min+1;
-	//valores=(int16_t *)malloc(((n/groups)+1)*sizeof(int16_t));
-	//cantidad=(int16_t *)malloc(((n/groups)+1)*sizeof(int16_t));
-	//valores[0]=min;//lista[0];
+
 	for(i=0;i<distance;i++){
-		//aux2[aux1[i]/5]++;
+
 		comprime(aux2,descomprime(aux1,i,0)/5,descomprime(aux2,descomprime(aux1,i,0)/5,0)+1);
 	}
-	/*aux2[0]=1;
 	
-	for(i=0,j=0;i<distance;i++){
-		if(j*groups+groups<=aux1[i]){
-			j++; 
-			aux2[j]=0;
-			i--	;
-		}else{
-			aux2[j]++;
-		}
-	}*/
 	
-	for(i=0;i<(n/groups)+1;i++){
-		//dbg(DBG_USR1, "%d  val: \%d    \%d\n",i,i*groups,aux2[i]);
-		//dbg(DBG_USR1, "%d  val: \%d    \%d\n",i,i*groups,descomprime(aux2,i,0));
-	}
-	//aux=aux2[(n/groups)];
 	aux=descomprime(aux2,(n/groups),0);
-	//processedVal=aux2[(n/groups)];
+	
 	processedVal=descomprime(aux2,(n/groups),0);
-	//for(i=(n/groups)-1;i>0 && !(aux>=aux2[i] && aux2[i]<aux2[i-1] &&processedVal>10/*50*/);i--){
-	//	processedVal+=aux2[i];
-	//	aux=aux2[i]; 		
-	//}
+	
 	for(i=(n/groups)-1;i>0 && !(aux>=descomprime(aux2,i,0) && descomprime(aux2,i,0)<descomprime(aux2,i-1,0) &&processedVal>10/*50*/);i--){
 		processedVal+=descomprime(aux2,i,0);
 		aux=descomprime(aux2,i,0); 		
 	}
 	thr=i*groups;//valores[i];
-	//aux=aux2[0];
+	
 	aux=descomprime(aux2,0,0);
-	//processedVal=aux2[0];
+	
 	processedVal=descomprime(aux2,0,0);
-	//for(i=1;i<(n/groups)+1 && !(aux>=aux2[i] && aux2[i]<aux2[i+1]  &&processedVal>100);i++){
-	//	processedVal+=aux2[i];
-	//	aux=aux2[i]; 		
-	//}
+	
 	for(i=1;i<(n/groups)+1 && !(aux>=descomprime(aux2,i,0) && descomprime(aux2,i,0)<descomprime(aux2,i+1,0)  &&processedVal>100);i++){
 		processedVal+=descomprime(aux2,i,0);
 		aux=descomprime(aux2,i,0); 		
 	}
 	thf=65;//i*groups;
 	
-	/*free(valores);
-	free(cantidad);
-	free(lista);
-	 */
 }
 
 
@@ -663,78 +471,48 @@ void thresholding(int16_t n){
 
 int8_t wqrs(int16_t datum, int8_t buffer[BUFLNZIP],int16_t out[12])
 { 
-	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)
-	
+	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
 	int8_t combine[4];//=(int8_t *)malloc(4*sizeof(int8_t));	
-	//uint8_t p1=255,p2;
 	int16_t max,i; //para el thresholding
 
-	//detecinterval=(int16_t)(0.12*FS + 0.5);
-	//detecinterval2=(int16_t)(0.40*FS + 0.5);
-    //s=FS*W-1;
-    //Buffer initialization
-  
-  
-	//buffer[(count+BUFLN)%(BUFLN)]=datum; 
 	comprime(buffer,(count+BUFLN)%(BUFLN),datum);
 	count=(count+1+BUFLN)%(BUFLN);
 	
-	//p2=p1&0x0f; 
-	//dbg(DBG_USR1, "p1: \%d p2: \%d \n",p1,p2);                         
-	//init=(count+1)+BUFLN)%(BUFLN);  
+	
 	init=((count+1)+BUFLN)%(BUFLN);  
 	from=init+margin;//+NOPS*(1.5*LQRS*FS-1)/2;
-	//dbg(DBG_USR1, "\%d --> MMF: \%d    \%d\n",count%BUFLN,descomprime(buffer,(count+BUFLN)%(BUFLN),1),descomprime(buffer,(count+BUFLN)%(BUFLN),0));
-	//to=from+distance;
-	//if(out==NULL) out=(int16_t *)malloc(12*sizeof(int16_t));	
 	
 	//Learning...
 	if(initialize && count==0){
 			initialize=0;
-			//to=BUFLN-55;//-NOPS*(1.5*LQRS*FS-1)/2;
-			//distance=to-from;
+			
 	}
 	if(initialize){return 0;}
 	
 	// Step 1: morphological filtering for noise reduction and baseline correction
 	mmf(buffer,fp);
-	//imprime 1
+	
 	dbg(DBG_USR1, "\%d %d\n",from%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0));
-	//imprime 2
-	//dbg(DBG_USR1, "%d, ",descomprime(fp,(from+BUFLN)%(BUFLN),0));
-		
-	//comprime(bf,(from+BUFLN)%(BUFLN),fp[(from+BUFLN)%(BUFLN)]);
-    //descomprime(bf,(from+BUFLN)%(BUFLN));
-    //from++;
-    
-     //dbg(DBG_USR1, "\%d val: \%d %d\n",from,mmt(((from+BUFLN)%(BUFLN)),fp),descomprime(bf,(from+BUFLN)%(BUFLN)));   
-    
+	
 	// Step 2: multiscale morphological transform 
 	
 	
-	/*//Thresholding calculation
+	//Thresholding calculation
 	if(count==0){
 		max=0;
 		notnoise=(notnoise+BUFLN)%(BUFLN);
 		for(i=0;i<distance;i++){	
-			//aux1[i]=abs(mmt(((i+from)+BUFLN)%(BUFLN),fp));
 			comprime(aux1,i,abs(mmt(((i+from)+BUFLN)%(BUFLN),fp)));
-			
-			//if(max<aux1[i])max=aux1[i];
+
 			if(max<descomprime(aux1,i,0))max=descomprime(aux1,i,0);
 		}
-		//quicksort(0,distance);
 		
-	
-		//max=aux1[distance-1];
-		//min=aux1[0];
 		thresholding(max);
 		dbg(DBG_USR1, "thr: \%d thf: \%d \n",thr,thf);                                    
 	}             
 	
 	
 	if(notnoise>=from){
-		//dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d\n",from%BUFLN,descomprime(buffer,(from+BUFLN)%(BUFLN),1),fp[(from+BUFLN)%(BUFLN)], mmt((from+BUFLN)%(BUFLN),fp));
 		dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d\n",from%BUFLN,descomprime(buffer,(from+BUFLN)%(BUFLN),1),descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
 		
 		
@@ -759,7 +537,6 @@ int8_t wqrs(int16_t datum, int8_t buffer[BUFLNZIP],int16_t out[12])
 				combine[0]=twave(fp,out);
 	
 				out[0]=(out[0]+BUFLN)%(BUFLN);
-				//out[1]=fp[(out[0]+BUFLN)%(BUFLN)];
 				out[1]=descomprime(fp,(out[0]+BUFLN)%(BUFLN),0);
 				out[2]=(out[2]+BUFLN)%(BUFLN);
 				out[3]=(out[3]+BUFLN)%(BUFLN);
@@ -768,13 +545,11 @@ int8_t wqrs(int16_t datum, int8_t buffer[BUFLNZIP],int16_t out[12])
 				if(combine[2]==1)out[5]=(out[5]+BUFLN)%(BUFLN); else out[5]=0;
 				if(combine[1]==1){
 					out[6]= (out[6]+BUFLN)%(BUFLN);
-					//out[7]= fp[(out[7]+BUFLN)%(BUFLN)];
 					out[7]=descomprime(fp,(out[7]+BUFLN)%(BUFLN),0);					
 					out[8]=(out[8]+BUFLN)%(BUFLN);}
 				else {out[6]= 0;out[7]=0;out[8]=0;}
 				if(combine[0]==1){
 					out[9]=(out[9]+BUFLN)%(BUFLN);
-					//out[10]= fp[(out[10]+BUFLN)%(BUFLN)];
 					out[10]=descomprime(fp,(out[10]+BUFLN)%(BUFLN),0);
 					out[11]= (out[11]+BUFLN)%(BUFLN);}
 				else {out[9]=0;out[10]= 0;out[11]= 0; notnoise=(from+10); }
@@ -783,14 +558,11 @@ int8_t wqrs(int16_t datum, int8_t buffer[BUFLNZIP],int16_t out[12])
 			
 		}else{
 				dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d Rwave not detected\n",from%BUFLN,descomprime(buffer,(from+BUFLN)%(BUFLN),1),descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp)); 
-				// dbg(DBG_USR1, "\%d --> MMF: \%d  \%d   \%d  Rwave not detected\n",from,buffer[(from+BUFLN)%(BUFLN)],fp[(from)&(BUFLN-1)],mmt((from)&(BUFLN-1),fp));
-				}
+			}
 	}else{
 		dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d Rpeak not detected\n",from%BUFLN,descomprime(buffer,(from+BUFLN)%(BUFLN),1),descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp)); 
-		//dbg(DBG_USR1, "\%d --> MMF: \%d \%d   \%d  Rpeak not detected\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)],mmt((from)&(BUFLN-1),fp));	
-	}
+		}
 	
-	//(void)free(fp);*/
 	return 0;
 }
 
