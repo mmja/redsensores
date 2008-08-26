@@ -1,3 +1,11 @@
+/**********************************************************************************************************
+/ VERSION 1.0 - Monica Jimenez, Laura Gutierrez
+/ Sin Filtro. Usa señales ya filtradas.
+/ Con Comprobacion de las detecciones para validarlas.
+/ Soportada por el Nodo (insuficiente tiempo para procesar los datos).                    
+/***********************************************************************************************************/
+
+
 #define BUFLN 300	/* must be a power of 2, see ltsamp() */
 #define BUFLNZIP 450
 
@@ -12,9 +20,8 @@
 #define LC 30 //=1.5*lo;
 #define L1 5 //=5;
 #define GROUPS 5 
-//int16_t getsample( int16_t dat, int16_t *f );
 int8_t wqrs(int16_t datum, int8_t fp[BUFLNZIP],int8_t detection[12],int16_t amplitudes[3]);
-//void freeBuffers();
+
 
 
 

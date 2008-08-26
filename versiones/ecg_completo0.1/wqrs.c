@@ -1,6 +1,11 @@
+/**********************************************************************************************************
+/ VERSION 0.1 - Monica Jimenez, Laura Gutierrez
+/ Con Punteros. Sin ninguna optimizacion.
+/ No soportada por el Nodo (por usar punteros).                    
+/***********************************************************************************************************/
+
 #include <math.h>
 #include "wqrs.h"
-//VARIABLES
 
 //Para el Paso 1
 int16_t *f0;//Fo= señal original
@@ -691,7 +696,7 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 	if(count==0){
 		notnoise=0;
 		thresholding(mf);
-		dbg(DBG_USR1, "thr: \%d thf: \%d \n",thr,thf);
+		
 		                                    
 	}             
 	//dbg(DBG_USR1, "\%d  Inicio Threshold --> THR: \%d \n",count, thr);
@@ -731,12 +736,12 @@ int32_t wqrs(int16_t datum, int16_t *buffer,int16_t *out)
 		
 			//tenemos que tocarlo en funcion de combine
 		
-		out[0]=Rpeak;out[1]=mmt(Rpeak,fp);out[2]=Rwave[0];out[3]=Rwave[1];
+		out[0]=Rpeak;out[1]=fp[Rpeak];out[2]=Rwave[0];out[3]=Rwave[1];
 		
 			if(combine[3]==1)out[4]=Qwave; else out[4]=-1;
 			if(combine[2]==1)out[5]=Swave; else out[5]=-1;
-			if(combine[1]==1){  out[6]= Pwave[0];out[7]= mmt(Pwave[2],fp);out[8]= Pwave[1];}else {out[6]= -1;out[7]=-1;out[8]=-1;}
-			if(combine[0]==1){out[9]=Twave[0];out[10]= mmt(Twave[2],fp);out[11]= Twave[1];}else {out[9]=-1;out[10]= -1;out[11]= -1;}
+			if(combine[1]==1){  out[6]= Pwave[0];out[7]= fp[Pwave[2]];out[8]= Pwave[1];}else {out[6]= -1;out[7]=-1;out[8]=-1;}
+			if(combine[0]==1){out[9]=Twave[0];out[10]= fp[Twave[2]];out[11]= Twave[1];}else {out[9]=-1;out[10]= -1;out[11]= -1;}
 			dbg(DBG_USR1, "\%d --> MMF: \%d \%d \%d \%d %d %d %d %d \%d \%d %d \%d \%d  %d\n",from,buffer[(from)&(BUFLN-1)],fp[(from)&(BUFLN-1)], mf[(from)&(BUFLN-1)],out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9], out[10], out[11]);	
 
 			

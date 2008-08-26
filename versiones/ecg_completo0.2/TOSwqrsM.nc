@@ -32,12 +32,8 @@ implementation {
 	
 	TOS_Msg datapck;
 	
-	//int8_t _buffer,*buffer=&_buffer;
-	int8_t buffer[BUFLNZIP];
-	uint8_t detection[12];
-	int16_t amplitudes[3];
-	int16_t data[8];
-	int16_t cycle=0;
+	sample_t _buffer,*buffer=&_buffer;
+	sample_t _out,*out=&_out;
 	int16_t c=0;
 	command result_t StdControl.init() {
 		//Inicializamos el nodo
@@ -71,43 +67,27 @@ implementation {
 		//wqrs con dicha muestra, tras la evaluación de la muestra por el algoritmo, enviaremos un mensaje a la estación base o no haremos nada
 		//y saldremos de este método.
 		
-		//static sample_t data;
-		static int8_t result;
-		static uint8_t i=0, j=0;
+		sample_t sample;
+		int32_t result;
+		
 		//Declaración de las demás variables que necesitamos
 		
 		//dbg(DBG_USR1, "Timer disparado\n");
 		
-		cycle++;
-		//dbg(DBG_USR1, "++++++++++++++++++++++  cycle: %d  %d\n",cycle, result);
-		switch(cycle){
-	
-		case 1: data[j++] = get_sample_from_core();
-				for(i=0;i<j;i++){
-					if(i!=0)dbg(DBG_USR1, " \n");  
-						 result = ecg_detection_datain(data[i],buffer);
-						 	
-				}
-				j=0; 
-				if(result==0) cycle--; break;
-		case 2: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rpeak(buffer,detection);if(result!=1) cycle=7;} break;
-		case 3:	data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rwave(buffer,detection,amplitudes); if(result!=1) cycle=7;} break;
-		case 4: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_qwave(buffer,detection); if(result!=1) cycle=7;} break;
-		case 5: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_swave(buffer,detection); if(result!=1) cycle=7;} break;
-		case 6: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_pwave(buffer,detection,amplitudes); if(result!=1) cycle=7;} break;
-		case 7: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_twave(buffer,detection,amplitudes);} break;
-		case 8:data[j++] = get_sample_from_core(); 
-			if(result<7 && result!=0) result=ecg_detection_valid(buffer,detection,amplitudes);
-			if(result>=1){
-	     			dbg(DBG_USR1, "--------------------------FIN ------------------------\n");
-			} 
-			result=0;
-			cycle=0;
-			break;
-		default: result = 0;cycle=0;
-	
-	
-	}
+		sample = get_sample_from_core();//Con esta llamada, tenemos en la variable "sample" la muestra que acabamos de leer
+		
+		//Ahora tenemos que llamar al algoritmo con la muestra que acabamos de leer, el resultado del procesamiento de la muestra
+		//se almacena en la variable "resultado":
+		
+		//if(c<512){
+			result = wqrs(sample,buffer,out); //c++;
+		//}
+		if(result==1){
+
+			//par obtener el valor de la señal en que se ha detectado se usa getsample(result,buffer), pero se supone que esto no es importante
+			//solo interesa el momento en que se detecta el qrs
+		  // dbg(DBG_USR1, " \%d  %d  [ %d , %d ]  %d  %d  [ \%d , %d ,\%d ]  [ \%d ,%d,  \%d ] \n",out[0],out[1],out[2],out[3],out[4],out[5],out[6],out[7],out[8],out[9], out[10], out[11]);
+		}
 		//Ahora evaluamos el resultado y en función de lo que hayamos obtenido mandaremos un paquete, o no haremos nada, etc.
 		
 		return SUCCESS;
@@ -144,7 +124,7 @@ implementation {
 		static unsigned int counter=0;
 		
 		input_d = (sample_t)testinput[counter++];
-		if(counter==119){//771){//163){//2900){//241){
+		if(counter==202){//771){//163){//2900){//241){
 			counter=0;
 		}
 		
