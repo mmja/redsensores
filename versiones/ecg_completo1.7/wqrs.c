@@ -1,6 +1,6 @@
 /**********************************************************************************************************
 / VERSION 1.0 - Monica Jimenez, Laura Gutierrez
-/ Devuelve las detecciones en formato HH:MM:SS:
+/ Devuelve las detecciones en formato HH:MM:SS.miliseg
 / Con Comprobacion de las detecciones para validarlas.
 / Soportada por el Nodo                    
 /***********************************************************************************************************/
