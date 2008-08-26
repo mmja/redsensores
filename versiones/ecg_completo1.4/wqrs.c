@@ -352,7 +352,7 @@ void addPosition(){
 		}	
 	}		
 }
-void giveTime(int16_t instant,uint8_t rtime[12]){
+void giveTime(int16_t instant,int8_t rtime[12]){
 	int16_t pos;
 	pos=positions;
 	rtime[2]=second;
