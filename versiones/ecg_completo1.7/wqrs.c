@@ -6,7 +6,6 @@
 /***********************************************************************************************************/
 #include <math.h>
 #include "wqrs.h"
-//VARIABLES
 
 int16_t count=0, from=0;//readed values number
 int16_t notnoise=0;
