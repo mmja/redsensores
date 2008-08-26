@@ -1,0 +1,5 @@
+1 - Morphological-transform.pdf: descripcion del algoritmo
+2 - Impulsive noise supresion.pdf: Paper referenciado en el 1 donde vienen explicados las Bs
+3 - detector - mmd: resumen esquematico nuestro del algoritmo
+
+4 - informacion que se puede derivar del ecg: reglas para el metodo validation
