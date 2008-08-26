@@ -19,7 +19,6 @@ int8_t fp[BUFLNZIP];//F= señal después del preprocesado
 //**********************************************************************************************************
 void comprime(int8_t f[BUFLNZIP],int16_t p,int16_t data){
 
-
 	int8_t data_mod;
 	int16_t inter;
 	
@@ -105,8 +104,6 @@ void erosion(int8_t f[BUFLNZIP], int16_t lon,int8_t B[lon],int8_t result[BUFLNZI
 			comprime(result,(init+i+BUFLN)%(BUFLN),descomprime(f,(init+i+BUFLN)%(BUFLN),isBuffer));
 		}
 	
-	
-	
 }
 
 void dilation(int8_t f[BUFLNZIP], int16_t lon,int8_t B[lon],int8_t result[BUFLNZIP],int8_t isBuffer){
@@ -154,7 +151,6 @@ void mmf(int8_t f[BUFLNZIP],int8_t sol[BUFLNZIP]){
 	
 	//matrix initialization
 	
-	//static int16_t Bo[lo],Bc[lc];
 	//B, Bo (apertura) y Bc (cierre) = se seleccionan basándose en las propiedades de las ondas características de ECG (elementos estructurales)
 	static int8_t Bc[l1];//,B2[l1];
 	
@@ -219,7 +215,6 @@ int16_t mmt(int16_t current,int8_t f[BUFLNZIP]){
 		}
 	return ((max+min-2*descomprime(f,(current+BUFLN)%(BUFLN),0) )*10 / s);
 
-	
 }	
 	
 //********************************************************************************************
@@ -402,11 +397,8 @@ int8_t twave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 		if (abs(mmt(r,f))>thf && mmt(r,f)<thf ){
 			outecg[10]=r;
 			encontrado=1;
-			
 			}
-	
 	}
-	
 	//busca 2º maximo local a la derecha (offset Twave):   
 	offsetT=mmt(r,f);
 	 for(right2=(r+1);right2<((from)+distance) && !(offsetT<=mmt(right2,f) && mmt(right2,f)>mmt(right2+1,f) && mmt(right2,f)>0/* && abs(mmt(right2,f))>thf*/)&&(t1!=0);right2++,t1--){    
@@ -440,8 +432,6 @@ void thresholding(int16_t n){
 
 		comprime(aux2,descomprime(aux1,i,0)/5,descomprime(aux2,descomprime(aux1,i,0)/5,0)+1);
 	}
-	
-	
 	aux=descomprime(aux2,(n/groups),0);
 	
 	processedVal=descomprime(aux2,(n/groups),0);
