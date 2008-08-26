@@ -24,7 +24,6 @@ int16_t Twave[3];// los 2 primeros maximos locales desde la dcha de Twave
 
 int16_t fp[BUFLN];//F= señal después del preprocesado
 
-
 //********************************************************************************************
 // step1: morphological filtering for noise reduction and baseline correction
 //********************************************************************************************
@@ -49,9 +48,6 @@ void erosion(int16_t f[BUFLN], int16_t lon,int16_t B[lon],int16_t result[BUFLN])
 		for(i=(BUFLN-(lon+1)/2);i<BUFLN;i++){
 			result[(init+i+BUFLN)%(BUFLN)]=f[(init+i+BUFLN)%(BUFLN)];	
 		}
-
-	
-	
 }
 
 void dilation(int16_t f[BUFLN], int16_t lon,int16_t B[lon],int16_t result[BUFLN]){
@@ -70,8 +66,6 @@ void dilation(int16_t f[BUFLN], int16_t lon,int16_t B[lon],int16_t result[BUFLN]
 		for(i=(BUFLN-(lon+1)/2);i<BUFLN;i++){
 			result[(init+i+BUFLN)%(BUFLN)]=f[(init+i+BUFLN)%(BUFLN)];	
 		}
-
-	
 }
 
 void opening(int16_t f[BUFLN], int16_t lon,int16_t B[lon],int16_t sol[BUFLN]){
@@ -91,12 +85,12 @@ void closing(int16_t f[BUFLN], int16_t lon,int16_t B[lon],int16_t sol[BUFLN]){
 
 //**************************************************************************************
 void mmf(int16_t f[BUFLN],int16_t sol[BUFLN]){
-	int16_t i=0,b2,b3;
+	int16_t i=0;
 
 	//matrix initialization
 	static int16_t Bo[lo],Bc[lc];
 	//B, Bo (apertura) y Bc (cierre) = se seleccionan basándose en las propiedades de las ondas características de ECG (elementos estructurales)
-	static int16_t B1[l1];//,B2[l1];
+	static int16_t B1[l1];
 
 	for(i=0;i<lc;i++){
 		Bc[i]=0;	
@@ -105,7 +99,6 @@ void mmf(int16_t f[BUFLN],int16_t sol[BUFLN]){
 		Bo[i]=0;	
 	}
 
-		
 	//baseline correction
 	opening(f,lo,Bo,aux2);
 	closing(aux2,lc,Bc,aux2);
@@ -115,9 +108,7 @@ void mmf(int16_t f[BUFLN],int16_t sol[BUFLN]){
 		aux2[i]=f[i]-aux2[i];	
 	
 	}
-	
-	
-		B1[0]=0;  B1[1]=1;   B1[2]=5;   B1[3]=1;   B1[4]=0;
+	B1[0]=0;  B1[1]=1;   B1[2]=5;   B1[3]=1;   B1[4]=0;
 	//formula 2
 	dilation(aux2,l1,B1,aux1);
 
@@ -134,14 +125,9 @@ void mmf(int16_t f[BUFLN],int16_t sol[BUFLN]){
 
 	dilation(aux1,l1,B1,aux2); //second
 
-	b2=sol[from%BUFLN];
-	
 	for(i=0;i<BUFLN;i++){
 		sol[i]=(sol[i]+aux2[i])/2;	
 	}
-	
-
-	
 }
 
 //********************************************************************************************
@@ -157,17 +143,11 @@ int16_t mmt(int16_t current,int16_t f[BUFLN]){
 		
 	    return -1;
     }
-		
-		for (t = current-s; t <= current+s; t++){ //find the maximum and minimum local values 
-
+	for (t = current-s; t <= current+s; t++){ //find the maximum and minimum local values 
 				if (f[(t+BUFLN)%(BUFLN)] > max) max = f[(t+BUFLN)%(BUFLN)]; 
 				if (f[(t+BUFLN)%(BUFLN)] < min) min = f[(t+BUFLN)%(BUFLN)];			
 		}
-		
     return ((max+min-2*f[(current+BUFLN)%(BUFLN)])*10 / s);
-	
-
-	
 }	
 	
 //********************************************************************************************
@@ -216,8 +196,7 @@ int8_t rwave(int16_t f[BUFLN]){
 	//From Rpeak:   	
     	right_local_max= mmt(Rpeak,f);
     	left_local_max= mmt(Rpeak,f);
-    //Looking for the first local maximun to right	
-          
+    //Looking for the first local maximun to right	         
     for(r=(Rpeak+1);r<((from)+distance) && !(right_local_max<= mmt(r,f) && mmt(r,f)>mmt(r+1,f) && abs(mmt(r,f) )>thf);r++){
 	     if(right_local_max< mmt(r,f)&& mmt(r,f)==mmt(r+1,f)){right=r;}		    
 	    right_local_max=mmt(r,f);
@@ -234,8 +213,7 @@ int8_t rwave(int16_t f[BUFLN]){
 		if(right != -1)Rwave[1]=right;else Rwave[1]=r;
 		return 1;	
 	}
-    else return 0;
-  
+    else return 0; 
 }
 
 //********************************************************************************************
@@ -255,7 +233,7 @@ int8_t qwave(int16_t f[BUFLN]){
 
 	Qwave=l;	
 
-    	if(l>=(from) && (t1!=0)) {return 1;}else{return 0;}
+    if(l>=(from) && (t1!=0)) {return 1;}else{return 0;}
 }
 //********************************************************************************************
 // step6: Swave detection
@@ -407,7 +385,6 @@ void quicksort(int16_t lista[distance],int16_t inf,int16_t sup){
 }
 void thresholding(int16_t lista[distance],int16_t min, int16_t max){
 	
-	
 	int16_t n=max-min+1,i,j, processedVal=0,aux;
 	int8_t groups=5;
 	int16_t valores[((n/groups)+1)];
@@ -445,10 +422,6 @@ void thresholding(int16_t lista[distance],int16_t min, int16_t max){
 	thf=65;//valores[i];
 	
 }
-
-
-
-
 
 //*******************************************************************************************
 //***************************  METODO PRINCIPAL ********************************************
@@ -493,7 +466,6 @@ int8_t wqrs(int16_t datum, int16_t buffer[BUFLN],int16_t out[12])
 			lista[i]=abs(mmt(((i+from)+BUFLN)%(BUFLN),fp));
 		}
 		quicksort(lista,0,distance);
-		
 	
 		max=lista[distance-1];
 		min=lista[0];

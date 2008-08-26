@@ -16,9 +16,6 @@
 #define distance 151//201//401//=to-from  = (BUFLN - margin )- (1 + margin) = BUFLN - 149;
 #define margin 74 //55+s -------  en vez de NOPS*(1.5*LQRS*FS-1)/2;
 
-#define lo 20 //=LQRS*FS;
-#define lc 30 //=1.5*lo;
-#define l1 5 //=5;
 #define groups 5 
 int8_t wqrs(int16_t datum, int8_t fp[BUFLNZIP],int16_t out[12]);
 

@@ -344,21 +344,21 @@ void addSecond(){
 		}	
 	}		
 }
-void giveTime(int16_t instant,int8_t ctime[12]){
+void giveTime(int16_t instant,int8_t rtime[12]){
 	
-	ctime[2]=second;
-	ctime[1]=minute;
-	ctime[0]=hour;
+	rtime[2]=second;
+	rtime[1]=minute;
+	rtime[0]=hour;
 	
-	ctime[2]+=((instant-from+BUFLN)%BUFLN)/200;
-	ctime[4]=((instant-from+BUFLN)%BUFLN)%200;
-	if(ctime[2]>60){
-		ctime[2]=ctime[2]-60;
-		ctime[1]++;
-		if(ctime[1]==60){
-			ctime[1]=0;
-			ctime[0]++;
-			if(ctime[0]==24) ctime[0]=0;
+	rtime[2]+=((instant-from+BUFLN)%BUFLN)/200;
+	rtime[4]=((instant-from+BUFLN)%BUFLN)%200;
+	if(rtime[2]>60){
+		rtime[2]=rtime[2]-60;
+		rtime[1]++;
+		if(rtime[1]==60){
+			rtime[1]=0;
+			rtime[0]++;
+			if(rtime[0]==24) rtime[0]=0;
 				
 		}	
 	}	

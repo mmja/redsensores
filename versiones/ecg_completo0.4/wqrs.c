@@ -17,7 +17,6 @@ int8_t aux1[BUFLNZIP];
 
 //**********************************************************************************************************
 void comprime(int8_t f[BUFLNZIP],int16_t p,int16_t data){
-	//int8_t comp[(BUFLN*1.5)+1];
 
 	int8_t data_mod;
 	int16_t inter;
@@ -72,11 +71,6 @@ int16_t descomprime(int8_t f[BUFLNZIP],int16_t p,int8_t isBuffer){
 	} 
 	return out;
 }
-
-
-
-//**************************************************************************************
-
 
 //********************************************************************************************
 // step2: multiscale morphological transform 
@@ -314,8 +308,6 @@ void thresholding(int16_t n){
 	for(i=0;i<distance;i++){
 		cantidad[descomprime(aux1,i,0)/5]++;
 	}
-	
-	
 	
 	aux=cantidad[n/groups];
 	processedVal=cantidad[n/groups];
