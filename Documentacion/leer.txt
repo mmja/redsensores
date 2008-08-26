@@ -2,4 +2,7 @@
 2 - Impulsive noise supresion.pdf: Paper referenciado en el 1 donde vienen explicados las Bs
 3 - detector - mmd: resumen esquematico nuestro del algoritmo
 
-4 - informacion que se puede derivar del ecg: reglas para el metodo validation
+4 - informacion que se puede derivar del ecg.pdf: reglas para el metodo validation
+5 - Power_tossim.pdf: explica como hacer el estudio de consumo
+6 - tinyos-programing.pdf:  manual de tinyos
+7 - nesc_manual.pdf: manual de nesc
