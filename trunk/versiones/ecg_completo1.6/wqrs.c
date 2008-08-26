@@ -206,7 +206,6 @@ int8_t pwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	int16_t onsetP;
 	int16_t pPeak;
 	int16_t encontrado=0;
-	int16_t i;
 	if(combine[3]==1){ // si existe q
 		offsetP=(detec[3]-1);
 		pPeak=detec[3]-2;
@@ -252,7 +251,6 @@ int8_t twave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	int16_t onsetT;
 	int16_t tPeak;
 	int16_t encontrado=0;
-	int16_t i;
 
 	if(combine[2]==1){ // si existe s
 		onsetT=(detec[4]+1);
@@ -356,7 +354,7 @@ void giveTime(int16_t instant,int8_t rtime[12]){
 
 int8_t mainPoints( int8_t f[BUFLNZIP]){
 	int16_t val1,val2,datum;
-	int16_t i,j;
+	int16_t j;
 	
 	j=from;	
 	datum= mmt((j+BUFLN)%(BUFLN),f);
@@ -373,7 +371,6 @@ int8_t mainPoints( int8_t f[BUFLNZIP]){
 		values[countdet]= val1;
 		if( (j+1 +BUFLN)%(BUFLN)!=0 )nfilled[countdet]=filled_buffer_from; else nfilled[countdet]=filled_buffer_from+1;
 		if((val1>val2) && (val1>datum))isMax[countdet]=1;else isMax[countdet]=0;
-		//if(abs(val1)>thr)dbg_clear(DBG_USR1, "maxMin  %d  values %d  max   %d\n",maxMin[countdet],values[countdet],isMax[countdet]);
 		countdet=(countdet+1+POINTS)%POINTS;
 		filled_mm=1;
 		return 1;
