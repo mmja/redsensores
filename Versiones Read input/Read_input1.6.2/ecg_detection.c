@@ -274,7 +274,6 @@ int8_t twave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 
 //********************************************************************************************
 //out = Rpeak, Rpeak.amplitude, Rwave[0], Rwave[1], Qwave, Swave, Pwave[0], Pwave.amplitude, Pwave[1], Twave[0], Twave.amplitude, Twave[1]
-
 int8_t mainPoints( int8_t f[BUFLNZIP]){
 	int16_t val1,val2,datum;
 	int16_t j;
