@@ -1,8 +1,9 @@
 /**********************************************************************************************************
-/ VERSION 1.0 - Monica Jimenez, Laura Gutierrez
+/ VERSION 1.7 - Monica Jimenez, Laura Gutierrez
 / Devuelve las detecciones en formato HH:MM:SS.miliseg
 / Con Comprobacion de las detecciones para validarlas.
-/ Soportada por el Nodo                    
+/ Eliminacion de buffers
+/ Soportada por el Nodo  (No detecta bien)                    
 /***********************************************************************************************************/
 #include <math.h>
 #include "wqrs.h"
