@@ -11,19 +11,17 @@ int16_t count=0, from=0;//readed values number
 int16_t notnoise=0;
 int16_t thr=0,thf=0; //threshold
 int8_t initialize=1, filled_mm=0;
-int8_t filled_buffer; //number of times since the last Rpeak detection that the buffer has been completely filled. 
 int8_t filled_buffer_fp=0; //max MAXFILLED times --> number of times that the buffer has to be filled to sum 200 positions  
 
-int16_t last_Rpeak; //saving the last rpeak instant
 uint8_t hour=0,minute=0,second=0, positions=0;
 int16_t out[12];
 int8_t combine[4]; // 0 ->Twave exist, 1-> Pwave exist,  2 ->S exist, 3 ->Q exist
 int16_t detec[5], countdet=0;
 uint16_t maxMin[POINTS];
 int16_t values[POINTS];
-int16_t nfilled[POINTS];
 int8_t isMax[POINTS];//Si es maximo se pone a 1 y si es minimo a 0
 int16_t valorAnterior;
+int16_t dist_rpeaks;
 //**********************************************************************************************************
 void comprime(int8_t f[BUFLNZIP],int16_t p,int16_t data){
 	int8_t data_mod;
@@ -107,7 +105,7 @@ int8_t rpeak_detection(int8_t f[BUFLNZIP], int16_t outecg[12]){
     while(r<countdet+POINTS){
 	    
 		if(values[(r+POINTS)%POINTS]<(-1*thr) && isMax[(r+POINTS)%POINTS]==0){	
-			outecg[0]=maxMin[(r+POINTS)%POINTS]+(BUFLN*nfilled[(r+POINTS)%POINTS]);
+			outecg[0]=maxMin[(r+POINTS)%POINTS];
 			outecg[1]=values[(r+POINTS)%POINTS];
 			detec[0]=r;
 			
@@ -116,7 +114,7 @@ int8_t rpeak_detection(int8_t f[BUFLNZIP], int16_t outecg[12]){
     }
     //ANALIZA EL ULTIMO VALOR
     if(values[(r+POINTS)%POINTS]<(-1*thr) && isMax[(r+POINTS)%POINTS]==0){
-	    outecg[0]=maxMin[(r+POINTS)%POINTS]+(BUFLN*nfilled[(r+POINTS)%POINTS]);
+	    outecg[0]=maxMin[(r+POINTS)%POINTS];
 	    outecg[1]=values[(r+POINTS)%POINTS];
 	    detec[0]=r;
 	    return 1;}
@@ -137,8 +135,8 @@ int8_t rwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	while((rwave0>=countdet) && rwave1<(countdet+POINTS)){
 		if((abs(values[(rwave0+POINTS)%POINTS])>thf) && (abs(values[(rwave1+POINTS)%POINTS])>thf)
 		&& isMax[(rwave0+POINTS)%POINTS]==1 && isMax[(rwave1+POINTS)%POINTS]==1){ 
-			outecg[2]=maxMin[(rwave0+POINTS)%POINTS]+(BUFLN*nfilled[(rwave0+POINTS)%POINTS]);  detec[1]=rwave0;
-			outecg[3]=maxMin[(rwave1+POINTS)%POINTS]+(BUFLN*nfilled[(rwave1+POINTS)%POINTS]);  detec[2]=rwave1;
+			outecg[2]=maxMin[(rwave0+POINTS)%POINTS];  detec[1]=rwave0;
+			outecg[3]=maxMin[(rwave1+POINTS)%POINTS];  detec[2]=rwave1;
 			return 1;
 		}else{
 			if((abs(values[(rwave0+POINTS)%POINTS])<=thf)||isMax[(rwave0+POINTS)%POINTS]==0 )	rwave0=(rwave0-1);
@@ -157,7 +155,7 @@ int8_t qwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	while(qw>=countdet){
 		if((abs(values[(qw+POINTS)%POINTS])>thf)  && (values[(qw+POINTS)%POINTS]>0)
 		&& (abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(qw+POINTS)%POINTS])<=DETECINTERVAL)&& isMax[(qw+POINTS)%POINTS]==0){  
-			outecg[4]=maxMin[(qw+POINTS)%POINTS]+(BUFLN*nfilled[(qw+POINTS)%POINTS]); 
+			outecg[4]=maxMin[(qw+POINTS)%POINTS]; 
 			detec[3]=qw; 		
 			return 1; 
 		}else{
@@ -178,7 +176,7 @@ int8_t swave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	while(sw<(countdet+POINTS)){	
 		if( (abs(values[(sw+POINTS)%POINTS])>thf) && (values[(sw+POINTS)%POINTS]>0)
 		&&  (abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(sw+POINTS)%POINTS])< DETECINTERVAL)  && isMax[(sw+POINTS)%POINTS]==0){  
-			outecg[5]=maxMin[(sw+POINTS)%POINTS]+(BUFLN*nfilled[(sw+POINTS)%POINTS]);  
+			outecg[5]=maxMin[(sw+POINTS)%POINTS];  
 			detec[4]=sw; 
 			return 1; 
 		}else {
@@ -212,8 +210,8 @@ int8_t pwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 		if((values[(onsetP+POINTS)%POINTS]>thf) && (values[(offsetP+POINTS)%POINTS]>thf) && (values[(pPeak+POINTS)%POINTS]<(-1)*thf)
 			&&  isMax[(onsetP+POINTS)%POINTS]==1 &&  isMax[(offsetP+POINTS)%POINTS]==1 &&  isMax[(pPeak+POINTS)%POINTS]==0){ 
 			
-				outecg[6]=maxMin[(onsetP+POINTS)%POINTS]+(BUFLN*nfilled[(onsetP+POINTS)%POINTS]);//onset
-		 		outecg[8]=maxMin[(offsetP+POINTS)%POINTS]+(BUFLN*nfilled[(offsetP+POINTS)%POINTS]);//offset    
+				outecg[6]=maxMin[(onsetP+POINTS)%POINTS];//onset
+		 		outecg[8]=maxMin[(offsetP+POINTS)%POINTS];//offset    
 		 		outecg[7]=values[(pPeak+POINTS)%POINTS]; 
 		 			return 1;
 	 	}else{
@@ -253,8 +251,8 @@ int8_t twave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	if((values[(onsetT+POINTS)%POINTS]>thf) && (values[(offsetT+POINTS)%POINTS]>thf) && (values[(tPeak+POINTS)%POINTS]<(-1)*thf)
 			&&  isMax[(onsetT+POINTS)%POINTS]==1 &&  isMax[(offsetT+POINTS)%POINTS]==1 &&  isMax[(tPeak+POINTS)%POINTS]==0){ 
 			
-				outecg[9]=maxMin[(onsetT+POINTS)%POINTS]+(BUFLN*nfilled[(onsetT+POINTS)%POINTS]);//onset
-		 		outecg[11]=maxMin[(offsetT+POINTS)%POINTS]+(BUFLN*nfilled[(offsetT+POINTS)%POINTS]);//offset    
+				outecg[9]=maxMin[(onsetT+POINTS)%POINTS];//onset
+		 		outecg[11]=maxMin[(offsetT+POINTS)%POINTS];//offset    
 		 		outecg[10]=values[(tPeak+POINTS)%POINTS]; 
 		 		notnoise=offsetT;
 		 			return 1;
@@ -327,49 +325,41 @@ void giveTime(int16_t instant,int8_t rtime[12]){
 //********************************************************************************************
 //out = Rpeak, Rpeak.amplitude, Rwave[0], Rwave[1], Qwave, Swave, Pwave[0], Pwave.amplitude, Pwave[1], Twave[0], Twave.amplitude, Twave[1]
 
-int8_t validation(int16_t rr){
+int8_t validation(int16_t rr,uint8_t detection[12]){
 	int16_t q,s,heart_freq;
-	int16_t qtc,aux;
-	static uint8_t detection[12];
+	int16_t qtc;
+	
 	//if Q or S dont exist, using Rwave[0] and Rwave[1] respectively
 	if(out[4]==-1){ 
-		giveTime(out[2],detection);
-		q=(detection[0]*360000 + detection[1]*6000 + detection[2]*100+detection[3]*0.5); 
+		q=detection[4]; 
 	
 	}else{ 
-		giveTime(out[4],detection);
-		q=(detection[0]*360000 + detection[1]*6000 + detection[2]*100+detection[3]*0.5); 
+		q=detection[6]; 
 	}	
 	if(out[5]==-1){ 
-		giveTime(out[3],detection);
-		s=(detection[0]*360000 + detection[1]*6000 + detection[2]*100+detection[3]*0.5); 
-	
+		s=detection[5]; 	
 	}else{
-		giveTime(out[5],detection);
-		s=(detection[0]*360000 + detection[1]*6000 + detection[2]*100+detection[3]*0.5); 
+		s=detection[7]; 
 	}
 	
 	//dbg(DBG_USR1, "thr: %d,  %d,  \%f  \n",s,q,((s-q+BUFLN)%BUFLN)/FREQ);                                    
 	//rule 1: Q-S distance<= 0.10s
-	if((s-q)/10 > 10) return 1;  
+	if((s+q) > 10) return 1;  
 		
 	//rule 2: 0.20s >= onset P - Q 	>= 0.12
-	giveTime(out[6],detection);
-	aux=(detection[0]*360000 + detection[1]*6000 + detection[2]*100+detection[3]*0.5); 
-	if((q-aux)/10 < 12 || (q-aux)/10 > 20) return 2; 
+	
+	if((detection[8]-q) < 12 || (detection[8]-q) > 20) return 2; 
 	
 	//rule 3: Twave.amplitude > 0
 	if(out[10]<0)return 3;
 	
 	//rule 4: Q-Rpeak distance <= 0.03s
-	giveTime(out[0],detection);
-	aux=(detection[0]*360000 + detection[1]*6000 + detection[2]*100+detection[3]*0.5); 
-	if((aux-q)/10 > 3){	return 4;}  
+	if(q > 3){	return 4;}  
 	
 	//rule 5: QTc = Q-offset T / sqr(RR), RR= Rpeaks distance, QTc in a normal range (see table qtc)
-	giveTime(out[11],detection);
-	aux=(detection[0]*360000 + detection[1]*6000 + detection[2]*100+detection[3]*0.5); 
-	/*qtc=(aux-q)/ sqrt(rr);
+	
+	
+	/*qtc=(detection[11]+q)/ sqrt(rr);
 	
 	heart_freq=60/rr;
 	dbg(DBG_USR1, "------------- %d    %d  %f\n",heart_freq,qtc, sqrt(rr));
@@ -421,9 +411,9 @@ int8_t mainPoints( int8_t f[BUFLNZIP]){
 	
 	//Si es maximo o minimo, y supera los umbrales (thr o thf)
 	if(((val1>val2 && val1>datum)||(val1<val2 && val1<datum)) && (( abs(val1)>thr) || (abs(val1)>thf))){
-		maxMin[countdet]= (j+1+BUFLN)%(BUFLN);
 		values[countdet]= val1;
-		if( (j+1 +BUFLN)%(BUFLN)!=0 )nfilled[countdet]=filled_buffer_fp; else nfilled[countdet]=filled_buffer_fp+1;
+		if( (j+1 +BUFLN)%(BUFLN)!=0 )maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*filled_buffer_fp;
+		else maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*(filled_buffer_fp+1);
 		if((val1>val2) && (val1>datum))isMax[countdet]=1;else isMax[countdet]=0;
 		countdet=(countdet+1+POINTS)%POINTS;
 		filled_mm=1;
@@ -431,9 +421,9 @@ int8_t mainPoints( int8_t f[BUFLNZIP]){
 	}else
 	//Si es el ultimo  de muchos iguales y supera umabrles
 		if(((val1==datum && valorAnterior<val1 && val1>val2)||(val1==datum && valorAnterior>val1 && val1<val2)) && (( abs(val1)>thr) || (abs(val1)>thf))){
-			maxMin[countdet]= (j+1+BUFLN)%(BUFLN);
 			values[countdet]= val1;
-			if( (j+1 +BUFLN)%(BUFLN)!=0 )nfilled[countdet]=filled_buffer_fp; else nfilled[countdet]=filled_buffer_fp+1;
+			if( (j+1 +BUFLN)%(BUFLN)!=0 )maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*filled_buffer_fp;
+			else maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*(filled_buffer_fp+1);
 			if((val1==datum) && (valorAnterior<val1 )&& (val1>val2))  isMax[countdet]=1;  else isMax[countdet]=0;
 			countdet=(countdet+1+POINTS)%POINTS;
 			filled_mm=1;
@@ -453,14 +443,15 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 	count=(count+1+BUFLN)%(BUFLN);
 	
 	//Aumenta el reloj:
-	 addPosition();                 
+	 addPosition();
+	 dist_rpeaks++;
+
+	                  
 	from=((count+1+MARGIN+BUFLN)%(BUFLN));//+NOPS*(1.5*LQRS*FS-1)/2;
 	if(from==0){
 		filled_buffer_fp++;
 		if(filled_buffer_fp==MAXFILLED) filled_buffer_fp=0; 	
-	}
-	if(count==0) filled_buffer++;
-	
+	}	
 	
 	//Fija los umbrales y Coge los puntos clave
 	thr=140; thf=5; 
@@ -478,7 +469,6 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 
 	//Learning...
 	if(initialize &&  countdet==0/*count==0*/&& filled_mm){
-		dbg_clear(DBG_USR1, "inicializado\n");
 			initialize=0;	
 	}
 
@@ -488,7 +478,8 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 		notnoise=(notnoise+POINTS)%(POINTS);	                   
 	}
 	if(notnoise==countdet) notnoise=0;   
-		          
+	
+			          
 	return 1;	
 	
 }
@@ -507,9 +498,8 @@ int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],uint8_t detection[12]){
 		
 	}else{
 		
-		if(filled_buffer%5>0){ 
-			giveTime(count,detection);
-			filled_buffer=0;	
+		if(dist_rpeaks>2*MAXFILLED*BUFLN){ 
+			giveTime(count,detection);	
 			//dbg(DBG_USR1, "****%d : %d : %d : % d *************\n",detection[0],detection[1],detection[2],detection[3]);	
 			dbg_clear(DBG_USR1, "Rpeak not detected\n"); 
 			return 10; //Too much time without Rpeak detection
@@ -521,7 +511,7 @@ int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],uint8_t detection[12]){
 }
 
 //****************************************************************************************************************************************
-int8_t ecg_detection_rwave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3]){  	
+int8_t ecg_detection_rwave(int8_t fp[BUFLNZIP]){  	
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
 	// Step 4: Rwave detection		
       	correct=rwave(fp,out);	
@@ -533,7 +523,7 @@ int8_t ecg_detection_rwave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 	return 0;
 }
 //****************************************************************************************************************************************
-int8_t ecg_detection_qwave(int8_t fp[BUFLNZIP],uint8_t detection[12]){     
+int8_t ecg_detection_qwave(int8_t fp[BUFLNZIP]){     
 	// Step 5: Qwave detection
 	notnoise=detec[2];//out[3]; 
 	combine[3]=qwave(fp,out);
@@ -541,13 +531,13 @@ int8_t ecg_detection_qwave(int8_t fp[BUFLNZIP],uint8_t detection[12]){
 }
 
 //****************************************************************************************************************************************
-int8_t ecg_detection_swave(int8_t fp[BUFLNZIP],uint8_t detection[12]){       
+int8_t ecg_detection_swave(int8_t fp[BUFLNZIP]){       
 	// Step 6: Swave detection
 	combine[2]= swave(fp,out);	
 	return 1;
 }
 //****************************************************************************************************************************************
-int8_t ecg_detection_pwave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3]){  
+int8_t ecg_detection_pwave(int8_t fp[BUFLNZIP]){  
 	// Step 7: onset and offset, Pwave and Twave detection
 	combine[1]=pwave(fp,out);
 	if(combine[1]==1){
@@ -559,17 +549,14 @@ int8_t ecg_detection_pwave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 	return 0;
 }
 //****************************************************************************************************************************************
-int8_t ecg_detection_twave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3]){  	
+int8_t ecg_detection_twave(int8_t fp[BUFLNZIP]){  	
 		// Step 7: onset and offset, Pwave and Twave detection
 		combine[0]=twave(fp,out);
-		if(combine[0]==1){
-			out[9]=(out[9]);	    detection[10]=(out[9]+BUFLN)%(BUFLN);
-			amplitudes[2]=out[10];			
-			out[11]= (out[11]); 	detection[11]=(out[11]+BUFLN)%(BUFLN);	
+		if(combine[0]==1){	
 			return 1;		
 		}else {
 			out[9]=-1;out[10]= -1;out[11]= -1; 
-			if(combine[1]!=1 || (maxMin[(countdet+1+POINTS)%POINTS]+(BUFLN*nfilled[(countdet+1+POINTS)%POINTS])) == out[6]){ 
+			if(combine[1]!=1 || (maxMin[(countdet+1+POINTS)%POINTS]) == out[6]){ 
 				dbg_clear(DBG_USR1, "****9999999999999999999999999999999 ************  \%d \%d \%d %d %d  %d %d ***\n",out[0],out[2],out[3],out[4],out[5],out[6],out[8] );
 				combine[0]=2;
 				return 9; //Twave not detected
@@ -584,50 +571,43 @@ int8_t ecg_detection_twave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3]){  
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
 	int16_t i=0;
-	int16_t dist_rpeaks;
+	
 	out[0]=(out[0]);		giveTime(out[0],detection);
 	out[1]=descomprime(fp,(out[0]+BUFLN)%(BUFLN),0);    amplitudes[0]=out[1];
-	out[2]=(out[2]); 	detection[4]=(out[2]+BUFLN)%(BUFLN);
-	out[3]=(out[3]);	detection[5]=(out[3]+BUFLN)%(BUFLN);
+	out[2]=(out[2]); 	detection[4]=abs(out[0]-out[2])>>1;
+	out[3]=(out[3]);	detection[5]=abs(out[0]-out[3])>>1;
 						
 	if(combine[0]==1){
-		out[9]=(out[9]);		detection[10]=(out[9]+BUFLN)%(BUFLN);
+		out[9]=(out[9]);		detection[10]=abs(out[0]-out[9])>>1;
 		amplitudes[2]=out[10];			
-		out[11]= (out[11]);		detection[11]=(out[11]+BUFLN)%(BUFLN);
+		out[11]= (out[11]);		detection[11]=abs(out[0]-out[11])>>1;
 	}else {
 		out[9]=-1;out[10]= -1;out[11]= -1; 
 		if(combine[0]==2){ correct=9;}
 	}
 	if(combine[1]==1){
-		out[6]= (out[6]);		detection[8]=(out[6]+BUFLN)%(BUFLN);
+		out[6]= (out[6]);		detection[8]=abs(out[0]-out[6])>>1;
 		amplitudes[1]=out[7];					
-		out[8]=(out[8]);		detection[9]=(out[8]+BUFLN)%(BUFLN);
+		out[8]=(out[8]);		detection[9]=abs(out[0]-out[8])>>1;
 	}else {	out[6]= -1;out[7]=-1;out[8]=-1; correct=8;}
 				
 	if(combine[0]==1 && combine[1]==1){
 		correct=0;
-		filled_buffer=0;
-		last_Rpeak=out[0];
 	}
 	if(combine[3]==1){
 		out[4]=(out[4]);
-		detection[6]=(out[4]+BUFLN)%(BUFLN);
+		detection[6]=abs(out[0]-out[4])>>1;
 	}else out[4]=-1;   
 
 	if(combine[2]==1){
 		out[5]=(out[5]);
-		detection[7]=(out[5]+BUFLN)%(BUFLN);
+		detection[7]=abs(out[0]-out[5])>>1;
 	} else out[5]=-1;  
 			   
 	if(correct!=8 && correct!=9){
-		dist_rpeaks=(detection[0]*360000 + detection[1]*6000 + detection[2]*100+detection[3]*0.5); 
-		giveTime(last_Rpeak,detection);
-		dist_rpeaks-=(detection[0]*360000 + detection[1]*6000 + detection[2]*100+detection[3]*0.5); 
-
-		if((filled_buffer%5)!=0) dist_rpeaks+=((filled_buffer%5)-1)*60;
-		
-		correct=validation(dist_rpeaks);
+		correct=validation(dist_rpeaks*5);
 	}	
+	dist_rpeaks=0;
 	for(i=0;i<12;i++){
 		giveTime(out[i],detection);	  
 		if(out[i]!=-1)out[i]=detection[3];  
