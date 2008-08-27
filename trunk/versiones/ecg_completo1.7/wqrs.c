@@ -457,13 +457,13 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 	thr=140; thf=5; 
 	if(!mainPoints(fp)){
 		giveTime((from) + (BUFLN*filled_buffer_fp),detection);
-		dbg_clear(DBG_USR1, "\%d  %d  %d %d--> MMF: \%d \%d in \n",detection[0],detection[1],detection[2],detection[3],descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
+		dbg_clear(DBG_USR1, "\%d  %d  %d %d --> MMF: \%d \%d \n",detection[0],detection[1],detection[2],detection[3],descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
  		
 		//dbg_clear(DBG_USR1, "\%d --> MMF: \%d \%d in \n",(from) + (BUFLN*filled_buffer_fp),descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
  		return 0;
  	}
  	giveTime((from) + (BUFLN*filled_buffer_fp),detection);
-	dbg_clear(DBG_USR1, "\%d  %d  %d %d--> MMF: \%d \%d \n",detection[0],detection[1],detection[2],detection[3],descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
+	dbg_clear(DBG_USR1, "\%d  %d  %d %d --> MMF: \%d \%d \n",detection[0],detection[1],detection[2],detection[3],descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
  		
 	//dbg_clear(DBG_USR1, "\%d --> MMF: \%d \%d -> %d  %d\n",(from) + (BUFLN*filled_buffer_fp),descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp),notnoise,countdet);
 
@@ -605,14 +605,17 @@ int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 	} else out[5]=-1;  
 			   
 	if(correct!=8 && correct!=9){
-		correct=validation(dist_rpeaks*5);
+		//correct=validation(dist_rpeaks*5);
+		correct=0;
 	}	
 	dist_rpeaks=0;
-	for(i=0;i<12;i++){
+	/*for(i=0;i<12;i++){
 		giveTime(out[i],detection);	  
 		if(out[i]!=-1)out[i]=detection[3];  
-	}
-	dbg_clear(DBG_USR1, "correct  \%d - \%d %d %d %d %d \%d \%d %d \%d \%d  %d\n",correct, out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9], out[10], out[11]);				
+	}*/
+	//dbg_clear(DBG_USR1, "correct  \%d - \%d %d %d %d %d \%d \%d %d \%d \%d  %d\n",correct, out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9], out[10], out[11]);				
+		
+	dbg_clear(DBG_USR1, " \%d --> \%d : %d : %d . %d  %d %d \%d \%d %d \%d \%d  %d\n",correct, detection[0],detection[1],detection[2],detection[3],detection[4],detection[5],detection[6],detection[7],detection[8], detection[9], detection[10], detection[11]);				
 		
 	return correct;
 
