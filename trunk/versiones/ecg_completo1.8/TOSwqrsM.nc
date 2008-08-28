@@ -38,7 +38,7 @@ implementation {
 	int16_t amplitudes[3];
 	int16_t data[8];
 	int16_t cycle=0;
-	int16_t c=0;
+
 	int8_t countT=0;
 	command result_t StdControl.init() {
 		//Inicializamos el nodo
@@ -97,7 +97,7 @@ implementation {
 		case 5: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_swave(buffer); /*if(result!=1) cycle=7;*/} break;
 		case 6: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_pwave(buffer); /*if(result!=1) cycle=7;*/} break;
 		case 7: data[j++] = get_sample_from_core();
-				//if(result==1){
+
 					result =  ecg_detection_twave(buffer);
 					while(result==9 && countT<50){
 						countT+=j;
@@ -106,7 +106,7 @@ implementation {
 						j=0; 
 						result =  ecg_detection_twave(buffer);
 					}
-				//}
+
 				countT=0;
 				
 				 break;
