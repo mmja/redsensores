@@ -2,7 +2,7 @@
 / VERSION 1.8 - Monica Jimenez, Laura Gutierrez
 / Devuelve las detecciones en formato HH:MM:SS.miliseg
 / Con Comprobacion de las detecciones para validarlas.
-/ Detecta bien (Mejora de la busqueda de onda T).
+/ Detecta bien (Mejora de la busqueda de onda T)--> OJO! detecciones mal desplazadas!! (solucionada version1.8.1)
 / Eliminacion de un buffer y variables sobrantes.
 / Reduccion del tamaño de buffers (de 24 a 18)
 / Soportada por el Nodo                    
@@ -354,10 +354,10 @@ int8_t validation(int16_t rr,uint8_t detection[12]){
 	if(((detection[8]>>1)-q) < 12 || ((detection[8]>>1)-q) > 20) return 2; 
 	
 	//rule 3: Twave.amplitude > 0
-	if(out[10]<0)return 3;
+	if(out[10]>0)return 3;
 	
 	//rule 4: Q-Rpeak distance <= 0.03s
-	if(q > 3){	return 4;}  
+	if(q > 3)return 4;  
 	
 	//rule 5: QTc = Q-offset T / sqr(RR), RR= Rpeaks distance, QTc in a normal range (see table qtc)
 	
@@ -504,7 +504,7 @@ int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],uint8_t detection[12]){
 		if(dist_rpeaks>2*MAXFILLED*BUFLN){ 
 			giveTime(count,detection);	
 			//dbg(DBG_USR1, "****%d : %d : %d : % d *************\n",detection[0],detection[1],detection[2],detection[3]);	
-			dbg_clear(DBG_USR1, "Rpeak not detected\n"); 
+			//dbg_clear(DBG_USR1, "Rpeak not detected\n"); 
 			return 10; //Too much time without Rpeak detection
 		}	
 }
@@ -520,9 +520,7 @@ int8_t ecg_detection_rwave(int8_t fp[BUFLNZIP]){
       	correct=rwave(fp,out);	
       	if (correct==1) {    
         	return 1;}	
-        else{
-	        dbg_clear(DBG_USR1, "\%d --> MMF:  \%d \%d Rwave not detected  %d\n",(from)%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp),out[0]);
-		}
+       // else{dbg_clear(DBG_USR1, "\%d --> MMF:  \%d \%d Rwave not detected  %d\n",(from)%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp),out[0]);}
 	return 0;
 }
 //****************************************************************************************************************************************
@@ -546,7 +544,7 @@ int8_t ecg_detection_pwave(int8_t fp[BUFLNZIP]){
 	if(combine[1]==1){
 		return 1;
 	}else {
-		dbg_clear(DBG_USR1, "****888888888888888888888888888888888888888888**********  \%d \%d \%d %d %d  ***\n",(out[0]),(out[2]),(out[3]),(out[4]),(out[5]) );	
+		//dbg_clear(DBG_USR1, "****888888888888888888888888888888888888888888**********  \%d \%d \%d %d %d  ***\n",(out[0]),(out[2]),(out[3]),(out[4]),(out[5]) );	
 		return 8; //Pwave not detected
 	}
 	return 0;
@@ -573,7 +571,6 @@ int8_t ecg_detection_twave(int8_t fp[BUFLNZIP]){
 //****************************************************************************************************************************************
 int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3]){  
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
-	int16_t i=0;
 	
 	giveTime(out[0],detection);
 	out[1]=descomprime(fp,(out[0]+BUFLN)%(BUFLN),0);    
