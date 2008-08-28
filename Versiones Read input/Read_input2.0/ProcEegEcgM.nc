@@ -1,8 +1,8 @@
 //make ucm_eeg_sta install.1
-/**
- *
- * @author Joaquin Recas
- */
+// VERSION 2.0
+// Envio - Recepcion: Se envian detecciones solo cuando hay error y este se ha repetido 2 veces seguidas               
+/***********************************************************************************************************/
+
 
 
 module ProcEegEcgM {

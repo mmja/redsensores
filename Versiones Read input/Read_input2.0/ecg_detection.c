@@ -1,11 +1,12 @@
 /**********************************************************************************************************
-/ VERSION 1.9 - Monica Jimenez, Laura Gutierrez
+/ VERSION 2.0 - Monica Jimenez, Laura Gutierrez
 / Devuelve las detecciones en formato HH:MM:SS.miliseg
 / Reduce variables y operaciones 
 / Resultados similares a los de chart - o - matic
 / Con Comprobacion de las detecciones para validarlas.
 / Devuelve las amplitudes de Rpeak, Pwave y Twave
-/ Soportada por el Nodo                    
+/ Soportada por el Nodo   
+/ Envio - Recepcion: Se envian detecciones solo cuando hay error y este se ha repetido 2 veces seguidas                  
 /***********************************************************************************************************/
 #include <math.h>
 #include "ecg_detection.h"
