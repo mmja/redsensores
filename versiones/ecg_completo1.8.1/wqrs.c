@@ -593,6 +593,7 @@ int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 			   
 	if(correct!=8 && correct!=9){
 		correct=validation(dist_rpeaks>>1,detection);
+
 	}	
 	dist_rpeaks=0;
 
