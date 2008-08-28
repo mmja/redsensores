@@ -474,17 +474,14 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 	if(initialize &&  countdet==0/*count==0*/&& filled_mm){
 			initialize=0;	
 	}
-
 	if(initialize ){return 0;}
 
 	if(countdet==0){		
 		notnoise=(notnoise+POINTS)%(POINTS);	                   
 	}
 	if(notnoise==countdet) notnoise=0;   
-	
 			          
 	return 1;	
-	
 }
 //****************************************************************************************************************************************
 int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],uint8_t detection[12]){ 
@@ -498,31 +495,24 @@ int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],uint8_t detection[12]){
 	correct=rpeak_detection(fp,out);
 	if (correct==1){
 		return 1;		
-		
 	}else{
 		
-		if(dist_rpeaks>2*MAXFILLED*BUFLN){ 
+		if(dist_rpeaks>2*BUFLNVIRT){ 
 			giveTime(count,detection);	
 			//dbg(DBG_USR1, "****%d : %d : %d : % d *************\n",detection[0],detection[1],detection[2],detection[3]);	
 			dbg_clear(DBG_USR1, "Rpeak not detected\n"); 
 			return 10; //Too much time without Rpeak detection
 		}	
-}
-	return 0;
-	
-	
+	}
+	return 0;	
 }
 
 //****************************************************************************************************************************************
 int8_t ecg_detection_rwave(int8_t fp[BUFLNZIP]){  	
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
 	// Step 4: Rwave detection		
-      	correct=rwave(fp,out);	
-      	if (correct==1) {    
-        	return 1;}	
-        else{
-	        dbg_clear(DBG_USR1, "\%d --> MMF:  \%d \%d Rwave not detected  %d\n",(from)%BUFLN,descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp),out[0]);
-		}
+    correct=rwave(fp,out);	
+    if (correct==1) { return 1;}	
 	return 0;
 }
 //****************************************************************************************************************************************
@@ -546,7 +536,6 @@ int8_t ecg_detection_pwave(int8_t fp[BUFLNZIP]){
 	if(combine[1]==1){
 		return 1;
 	}else {
-		dbg_clear(DBG_USR1, "****888888888888888888888888888888888888888888**********  \%d \%d \%d %d %d  ***\n",(out[0]),(out[2]),(out[3]),(out[4]),(out[5]) );	
 		return 8; //Pwave not detected
 	}
 	return 0;
@@ -559,14 +548,9 @@ int8_t ecg_detection_twave(int8_t fp[BUFLNZIP]){
 			return 1;		
 		}else {
 			out[9]=-1;out[10]= -1;out[11]= -1; 
-			//if(combine[1]!=1 /*|| (maxMin[(countdet+1+POINTS)%POINTS]) == out[6]*/){ 
-			//	dbg_clear(DBG_USR1, "****9999999999999999999999999999999 ************  \%d \%d \%d %d %d  %d %d ***\n",out[0],out[2],out[3],out[4],out[5],out[6],out[8] );
 				combine[0]=2;
 				return 9; //Twave not detected
-			//}
-			//else {
-			//	notnoise=countdet+1;
-			//}		
+		
 		}
 		return 0;
 }
@@ -609,14 +593,12 @@ int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 			   
 	if(correct!=8 && correct!=9){
 		correct=validation(dist_rpeaks>>1,detection);
-		//correct=0;
 	}	
 	dist_rpeaks=0;
 
 	//dbg_clear(DBG_USR1, "correct  \%d - \%d %d %d %d %d \%d \%d %d \%d \%d  %d\n",correct, out[0],out[2],out[3],out[4],out[5],out[6],out[7],out[8], out[9], out[10], out[11]);				
 		
 	dbg_clear(DBG_USR1, " \%d --> \%d : %d : %d . %d  %d %d \%d \%d %d \%d \%d  %d\n",correct, detection[0],detection[1],detection[2],detection[3],detection[4],detection[5],detection[6],detection[7],detection[8], detection[9], detection[10], detection[11]);				
-		
 	return correct;
 
 				
