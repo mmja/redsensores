@@ -573,7 +573,6 @@ int8_t ecg_detection_twave(int8_t fp[BUFLNZIP]){
 //****************************************************************************************************************************************
 int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3]){  
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
-	int16_t i=0;
 	
 	giveTime(out[0],detection);
 	out[1]=descomprime(fp,(out[0]+BUFLN)%(BUFLN),0);    
