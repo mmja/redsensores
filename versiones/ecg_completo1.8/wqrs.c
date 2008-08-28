@@ -11,7 +11,7 @@ int16_t count=0, from=0;//readed values number
 int16_t notnoise=0;
 int16_t thr=0,thf=0; //threshold
 int8_t initialize=1, filled_mm=0;
-int8_t filled_buffer_fp=0; //max MAXFILLED times --> number of times that the buffer has to be filled to sum 200 positions  
+int16_t filled_buffer_fp=0; //max MAXFILLED times --> number of times that the buffer has to be filled to sum 200 positions  
 
 uint8_t hour=0,minute=0,second=0, positions=0;
 int16_t out[12];
