@@ -49,7 +49,7 @@ implementation {
     
 	static uint8_t i=0, j=0;
 	//static uint16_t data;
-	uint8_t ldata, mdata;
+	//uint8_t ldata, mdata;
 	static int8_t result;
 	//static uint8_t c=0;
 	
@@ -84,7 +84,7 @@ implementation {
 					}
 
 				countT =0;
-				
+		//TOSH_TOGGLE_GREEN_LED_PIN();		
 				 break;
 		case 8:data[j++] = get_sample_from_core(); 
 			if(result<10 && result!=0) {
@@ -95,22 +95,21 @@ implementation {
 			if(result>=1){
 	     		
 			  	//ldata = (uint8_t) (out[i] & 0x00ff);  // lower 8bit
-			  	ldata=(uint8_t) (out[0] & 0x00ff);
+			  	//ldata=(uint8_t) (result & 0x00ff);
 				//mdata = (uint8_t) ((out[i] & 0xff00) >> 8);  // higher 8bit
-				mdata=(uint8_t) ((out[0]& 0xff00) >> 8);
+				//mdata=(uint8_t) ((result& 0xff00) >> 8);
 				if(whichPacket==0){
-					datapck.data[2*numData] = mdata;
-					datapck.data[2*numData+1] = ldata;
-					
-					datapck.data[2*numData+2] = result;
-					datapck.data[2*numData+3] = result;
+					datapck.data[2*numData] = result;
+					for(i=1;i<13;i++){
+						datapck.data[2*numData+i] = detection[i-1];
+						}
+
 				}
 				else{
-					datapck2.data[2*numData] = mdata;
-					datapck2.data[2*numData+1] = ldata;
-					
-					datapck2.data[2*numData+2] = result;
-					datapck2.data[2*numData+3] = result;
+					datapck2.data[2*numData] = result;
+					for(i=1;i<13;i++){
+						datapck2.data[2*numData+i] = detection[i-1];
+						}
 				}
 				numData = numData+1;
 				
