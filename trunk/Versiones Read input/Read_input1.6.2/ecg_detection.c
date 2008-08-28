@@ -419,9 +419,9 @@ int8_t ecg_detection_twave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 		// Step 7: onset and offset, Pwave and Twave detection
 		combine[0]=twave(fp,out);
 		if(combine[0]==1){
-			out[9]=(out[9]);	    detection[10]=(out[9]+BUFLN)%(BUFLN);
+			detection[10]=(out[9]+BUFLN)%(BUFLN);
 			amplitudes[2]=out[10];			
-			out[11]= (out[11]); 	detection[11]=(out[11]+BUFLN)%(BUFLN);	
+			detection[11]=(out[11]+BUFLN)%(BUFLN);	
 			return 1;		
 		}else {
 			out[9]=-1;out[10]= -1;out[11]= -1; 
@@ -439,23 +439,23 @@ int8_t ecg_detection_twave(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3])
 {  
 	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
-	out[0]=(out[0]);
+
 	out[1]=descomprime(fp,(out[0]+BUFLN)%(BUFLN),0);    amplitudes[0]=out[1];
-	out[2]=(out[2]); 	detection[4]=(out[2]+BUFLN)%(BUFLN);
-	out[3]=(out[3]);	detection[5]=(out[3]+BUFLN)%(BUFLN);
+	detection[4]=(out[2]+BUFLN)%(BUFLN);
+	detection[5]=(out[3]+BUFLN)%(BUFLN);
 						
 	if(combine[0]==1){
-		out[9]=(out[9]);		detection[10]=(out[9]+BUFLN)%(BUFLN);
+		detection[10]=(out[9]+BUFLN)%(BUFLN);
 		amplitudes[2]=out[10];			
-		out[11]= (out[11]);		detection[11]=(out[11]+BUFLN)%(BUFLN);
+		detection[11]=(out[11]+BUFLN)%(BUFLN);
 	}else {
 		out[9]=-1;out[10]= -1;out[11]= -1; 
 		if(combine[0]==2 || (countdet+1) >= POINTS){ correct=9;	}
 	}
 	if(combine[1]==1){
-		out[6]= (out[6]);		detection[8]=(out[6]+BUFLN)%(BUFLN);
+		detection[8]=(out[6]+BUFLN)%(BUFLN);
 		amplitudes[1]=out[7];					
-		out[8]=(out[8]);		detection[9]=(out[8]+BUFLN)%(BUFLN);
+		detection[9]=(out[8]+BUFLN)%(BUFLN);
 		
 	}else {	out[6]= -1;out[7]=-1;out[8]=-1; correct=8;}
 				
@@ -464,13 +464,13 @@ int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 		filled_buffer=0;
 	}
 		if(combine[3]==1){
-			out[4]=(out[4]);//+BUFLN)%(BUFLN); 
+			
 			detection[6]=(out[4]+BUFLN)%(BUFLN);
  
 		}else out[4]=-1;   
 
 	if(combine[2]==1){
-		out[5]=(out[5]);//+BUFLN)%(BUFLN);
+		
 		detection[7]=(out[5]+BUFLN)%(BUFLN);
 			
 	} else out[5]=-1;  

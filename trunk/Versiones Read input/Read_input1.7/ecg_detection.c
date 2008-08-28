@@ -12,7 +12,7 @@ int16_t count=0, from=0;//readed values number
 int16_t notnoise=0;
 int16_t thr=0,thf=0; //threshold
 int8_t initialize=1, filled_mm=0;
-int8_t filled_buffer_fp=0; //max MAXFILLED times --> number of times that the buffer has to be filled to sum 200 positions  
+int16_t filled_buffer_fp=0; //max MAXFILLED times --> number of times that the buffer has to be filled to sum 200 positions  
 
 uint8_t hour=0,minute=0,second=0, positions=0;
 int16_t out[12];
@@ -424,8 +424,8 @@ int8_t mainPoints( int8_t f[BUFLNZIP]){
 	//Si es el ultimo  de muchos iguales y supera umabrles
 		if(((val1==datum && valorAnterior<val1 && val1>val2)||(val1==datum && valorAnterior>val1 && val1<val2)) && (( abs(val1)>thr) || (abs(val1)>thf))){
 			values[countdet]= val1;
-			if( (j+1 +BUFLN)%(BUFLN)!=0 )maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*filled_buffer_fp;
-			else maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*(filled_buffer_fp+1);
+			if( (j+1 +BUFLN)%(BUFLN)!=0 )maxMin[countdet]= ((j+1+BUFLN)%(BUFLN))+BUFLN*filled_buffer_fp;
+			else maxMin[countdet]= ((j+1+BUFLN)%(BUFLN))+BUFLN*(filled_buffer_fp+1);
 			if((val1==datum) && (valorAnterior<val1 )&& (val1>val2))  isMax[countdet]=1;  else isMax[countdet]=0;
 			countdet=(countdet+1+POINTS)%POINTS;
 			filled_mm=1;

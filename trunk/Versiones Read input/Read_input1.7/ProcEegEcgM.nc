@@ -70,14 +70,17 @@ implementation {
 				if(result==0) cycle--; break;
 		case 2: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rpeak(buffer,detection);if(result!=1) cycle=7;} break;
 		case 3:	data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rwave(buffer); if(result!=1) cycle=7;} break;
-		case 4: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_qwave(buffer); if(result!=1) cycle=7;} break;
-		case 5: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_swave(buffer); if(result!=1) cycle=7;} break;
-		case 6: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_pwave(buffer); if(result!=1) cycle=7;} break;
-		case 7: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_twave(buffer);} break;
+		case 4: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_qwave(buffer); /*if(result!=1) cycle=7;*/} break;
+		case 5: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_swave(buffer); /*if(result!=1) cycle=7;*/} break;
+		case 6: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_pwave(buffer); /*if(result!=1) cycle=7;*/} break;
+		case 7: data[j++] = get_sample_from_core();result =  ecg_detection_twave(buffer);break;
 		case 8:data[j++] = get_sample_from_core(); 
-		//if(result<7 && result!=0)
-			if(result!=0) result=ecg_detection_valid(buffer,detection,amplitudes);
-			//if(result==10) if(i==0){TOSH_SET_MISC1_PIN(); i=1;}else{ TOSH_CLR_MISC1_PIN(); i=0;}
+			if(result<10 && result!=0) {
+				result=ecg_detection_valid(buffer,detection,amplitudes);
+			
+			}
+
+			
 			if(result>=1){
 	     		
 			  	//ldata = (uint8_t) (out[i] & 0x00ff);  // lower 8bit
@@ -109,7 +112,6 @@ implementation {
 			result=0;
 			cycle=0;
 			break;
-			
 		default: result = 0;cycle=0;
 	
 	
