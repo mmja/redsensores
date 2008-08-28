@@ -2,7 +2,7 @@
 / VERSION 1.8 - Monica Jimenez, Laura Gutierrez
 / Devuelve las detecciones en formato HH:MM:SS.miliseg
 / Con Comprobacion de las detecciones para validarlas.
-/ Detecta bien (Mejora de la busqueda de onda T).
+/ Detecta bien (Mejora de la busqueda de onda T).--> OJO! detecciones mal desplazadas!! (solucionada version1.8.1)
 / Eliminacion de un buffer y variables sobrantes.
 / Reduccion del tamaño de buffers (de 24 a 18)
 / Soportada por el Nodo                    
