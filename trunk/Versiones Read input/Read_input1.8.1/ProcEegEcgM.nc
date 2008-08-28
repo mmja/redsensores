@@ -157,7 +157,7 @@ implementation {
 		static unsigned int counter=0;
 		
 		input_d = (uint16_t)testinput[counter++];
-		if(counter==119){//771){//163){//2900){//241){
+		if(counter==495){//771){//163){//2900){//241){
 			counter=0;
 		}
 		
