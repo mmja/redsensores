@@ -1,7 +1,10 @@
 /**********************************************************************************************************
-/ VERSION 1.0 - Monica Jimenez, Laura Gutierrez
+/ VERSION 1.8 - Monica Jimenez, Laura Gutierrez
 / Devuelve las detecciones en formato HH:MM:SS.miliseg
 / Con Comprobacion de las detecciones para validarlas.
+/ Detecta bien (Mejora de la busqueda de onda T).
+/ Eliminacion de un buffer y variables sobrantes.
+/ Reduccion del tamaño de buffers (de 24 a 18)
 / Soportada por el Nodo                    
 /***********************************************************************************************************/
 #include <math.h>
