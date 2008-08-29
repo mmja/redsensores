@@ -1,6 +1,6 @@
 //make ucm_eeg_sta install.1
 // VERSION 2.0.2
-// Envio - Recepcion: Se envian detecciones solo cuando hay error y este se ha repetido VARIAS veces SEGUIDAS
+// Envio - Recepcion: Se envian detecciones y estas se ha repetido VARIAS veces SEGUIDAS
 //(si no se ha enviado ya)             
 // Registro de Historia de con "history" valores
 /***********************************************************************************************************/
@@ -25,7 +25,7 @@ implementation {
 	int16_t data[8];
 	int8_t countT=0;
 	uint8_t results[HISTORY];
-	uint8_t lastSendResult=0;
+	int8_t lastSendResult=0;
 	static uint16_t get_sample_from_core();
 	static result_t send_result_to_host();
   
@@ -61,8 +61,8 @@ implementation {
 				}
 				j=0; 
 				if(result==0) cycle--; break;
-		case 2: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rpeak(buffer,detection);if(result!=1) cycle=7;} break;
-		case 3:	data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rwave(buffer); if(result!=1) cycle=7;} break;
+		case 2: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rpeak(buffer,detection);if(result==10) cycle=7;if(result==0) cycle=0;} break;
+		case 3:	data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rwave(buffer); if(result!=1) cycle=0;} break;
 		case 4: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_qwave(buffer); /*if(result!=1) cycle=7;*/} break;
 		case 5: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_swave(buffer); /*if(result!=1) cycle=7;*/} break;
 		case 6: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_pwave(buffer); /*if(result!=1) cycle=7;*/} break;
@@ -86,12 +86,13 @@ implementation {
 			
 			//Numero de veces repetidas SEGUIDAS Y ULTIMAS que ya ha dado ese resultado
 			i=HISTORY-1;
+			numRepeatedResult=0;
 			while(result==results[i]&& i>=0){
 				numRepeatedResult++;
 				i--;
 				}
-			//Si ya ha pasado mas de 2 veces, es un error, y no se envio la ultima vez --> enviamos el error
-			if((numRepeatedResult>2)&& (result>=1)&& result!=lastSendResult){
+			//Si ya ha pasado mas de 2 veces, es o NO un error, y no se envio la ultima vez --> enviamos el error
+			if((numRepeatedResult>=1) /*&& (result>=1)*/&& result!=lastSendResult){
 	  			lastSendResult=result;
 				if(whichPacket==0){
 					datapck.data[numData++] = result;

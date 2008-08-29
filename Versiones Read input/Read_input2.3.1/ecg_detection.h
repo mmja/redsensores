@@ -1,5 +1,5 @@
 /**********************************************************************************************************
-/ VERSION 1.9 - Monica Jimenez, Laura Gutierrez
+/ VERSION 2.3.1 - Monica Jimenez, Laura Gutierrez
 / Devuelve las detecciones en formato HH:MM:SS.miliseg
 / Reduce variables y operaciones 
 / Resultados similares a los de chart - o - matic

@@ -24,7 +24,7 @@ implementation {
 	int16_t amplitudes[3];
 	int16_t data[8];
 	int8_t countT=0;
-	uint8_t results[]={0};
+	static int8_t results;
 	static uint16_t get_sample_from_core();
 	static result_t send_result_to_host();
   
@@ -70,8 +70,8 @@ implementation {
 				}
 				j=0; 
 				if(result==0) cycle--; break;
-		case 2: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rpeak(buffer,detection);if(result!=1) cycle=7;} break;
-		case 3:	data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rwave(buffer); if(result!=1) cycle=7;} break;
+		case 2: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rpeak(buffer,detection);if(result==10) cycle=7;if(result==0) cycle=0;} break;
+		case 3:	data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rwave(buffer); if(result!=1) cycle=0;} break;
 		case 4: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_qwave(buffer); /*if(result!=1) cycle=7;*/} break;
 		case 5: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_swave(buffer); /*if(result!=1) cycle=7;*/} break;
 		case 6: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_pwave(buffer); /*if(result!=1) cycle=7;*/} break;
@@ -90,19 +90,20 @@ implementation {
 		case 8:data[j++] = get_sample_from_core(); 
 			if(result<10 && result!=0) {
 				result=ecg_detection_valid(buffer,detection,amplitudes);
+				
 			
 			}
 			
 			
-			
-			if((result==results[0])&& (result>=1)){
+			//TOSH_TOGGLE_GREEN_LED_PIN();
+			if((result==results)&& (result>=1)){
 	     		
 			  	//ldata = (uint8_t) (out[i] & 0x00ff);  // lower 8bit
 			  	//ldata=(uint8_t) (result & 0x00ff);
 				//mdata = (uint8_t) ((out[i] & 0xff00) >> 8);  // higher 8bit
 				//mdata=(uint8_t) ((result& 0xff00) >> 8);
 				if(whichPacket==0){
-					datapck.data[numData++] = result;
+					datapck.data[numData++] = results;
 					for(i=1;i<12;i++){
 						datapck.data[numData++] = detection[i];
 						}
@@ -115,7 +116,7 @@ implementation {
 					}
 				}
 				else{
-						datapck2.data[numData++] = result;
+						datapck2.data[numData++] = results;
 					for(i=1;i<12;i++){
 						datapck2.data[numData++] = detection[i];
 						}
@@ -135,7 +136,7 @@ implementation {
 				}
 	   
 			} 
-			results[0]=result;
+			results=result;
 			result=0;
 			cycle=0;
 			break;
