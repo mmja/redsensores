@@ -1,8 +1,12 @@
 1 - Morphological-transform.pdf: descripcion del algoritmo
-2 - Impulsive noise supresion.pdf: Paper referenciado en el 1 donde vienen explicados las Bs
-3 - detector - mmd: resumen esquematico nuestro del algoritmo
+ - ECG signal conditioning by morphological filtering: descripcion del filtro de ruido del paper 1
+ - Impulsive noise supresion.pdf: Paper referenciado en el 1 donde vienen explicados las Bs
+ - detector - mmd: resumen esquematico nuestro del algoritmo
 
-4 - informacion que se puede derivar del ecg.pdf: reglas para el metodo validation
-5 - Power_tossim.pdf: explica como hacer el estudio de consumo
-6 - tinyos-programing.pdf:  manual de tinyos
-7 - nesc_manual.pdf: manual de nesc
+ - informacion que se puede derivar del ecg.pdf: reglas para el metodo validation
+ - Power_tossim.pdf: explica como hacer el estudio de consumo
+ - tinyos-programing.pdf:  manual de tinyos
+ - nesc_manual.pdf: manual de nesc
+ - msp430f149.pdf: datasheet de  nuestro nodo
+ - jhill_thesis.pdf: tesis sobre las redes de sensores en general (muy larga pero completa)
+ - Redes de sensores inalambricas.pdf: trabajo de dse
