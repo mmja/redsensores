@@ -1,13 +1,13 @@
 /**********************************************************************************************************
-/ VERSION 1.9 - Monica Jimenez, Laura Gutierrez
+/ VERSION 2.3 - Monica Jimenez, Laura Gutierrez
 / Devuelve las detecciones en formato HH:MM:SS.miliseg
 / Reduce variables y operaciones 
 / Resultados similares a los de chart - o - matic
 / Con Comprobacion de las detecciones para validarlas.
 / Devuelve las amplitudes de Rpeak, Pwave y Twave
-/ Soportada por el Nodo                    
+/ Soportada por el Nodo   
 / Envio - Recepcion:  El paquete contiene solo el error detectado y el instante de tiempo del rpeak asociado
-/       			  Envia 4 rpeaks por cada paquete (también envia cuando es correcto)         
+/       			  Envia 4 rpeaks por cada paquete (también envia cuando es correcto)                          
 /***********************************************************************************************************/
 #include <math.h>
 #include "ecg_detection.h"
@@ -161,12 +161,14 @@ int8_t qwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	
 	while(qw>=countdet){
 		if((abs(values[(qw+POINTS)%POINTS])>thf)  && (values[(qw+POINTS)%POINTS]>0)
-		&& (abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(qw+POINTS)%POINTS])<=DETECINTERVAL)&& isMax[(qw+POINTS)%POINTS]==0){  
+		&& ((BUFLNVIRT - maxMin[(qw+POINTS)%POINTS] +maxMin[(detec[0]+POINTS)%POINTS])%BUFLNVIRT)<=DETECINTERVAL && isMax[(qw+POINTS)%POINTS]==0){  
 			outecg[4]=maxMin[(qw+POINTS)%POINTS]; 
 			detec[3]=qw; 		
 			return 1; 
 		}else{
-			if(abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(qw+POINTS)%POINTS])>DETECINTERVAL || (values[(qw+POINTS)%POINTS]<0))
+			
+			
+			if((BUFLNVIRT - maxMin[(qw+POINTS)%POINTS] +maxMin[(detec[0]+POINTS)%POINTS])%BUFLNVIRT>DETECINTERVAL || (values[(qw+POINTS)%POINTS]<0))
 				return 0;	
 			if((abs(values[(qw+POINTS)%POINTS])<=thf)||isMax[(qw+POINTS)%POINTS]==1)	qw=(qw-1);
 		}
@@ -182,12 +184,12 @@ int8_t swave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	
 	while(sw<(countdet+POINTS)){	
 		if( (abs(values[(sw+POINTS)%POINTS])>thf) && (values[(sw+POINTS)%POINTS]>0)
-		&&  (abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(sw+POINTS)%POINTS])< DETECINTERVAL)  && isMax[(sw+POINTS)%POINTS]==0){  
+		&&  ((BUFLNVIRT - maxMin[(detec[0]+POINTS)%POINTS] +maxMin[(sw+POINTS)%POINTS])%BUFLNVIRT< DETECINTERVAL)  && isMax[(sw+POINTS)%POINTS]==0){  
 			outecg[5]=maxMin[(sw+POINTS)%POINTS];  
 			detec[4]=sw; 
 			return 1; 
 		}else {
-			if(abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(sw+POINTS)%POINTS])>DETECINTERVAL || (values[(sw+POINTS)%POINTS]<0))
+			if((BUFLNVIRT - maxMin[(detec[0]+POINTS)%POINTS] +maxMin[(sw+POINTS)%POINTS])%BUFLNVIRT>DETECINTERVAL || (values[(sw+POINTS)%POINTS]<0))
 				return 0;	
 			if((abs(values[(sw+POINTS)%POINTS])<=thf)|| isMax[(sw+POINTS)%POINTS]==1)	sw=(sw+1);
 		}

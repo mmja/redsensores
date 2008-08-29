@@ -6,7 +6,7 @@
 / Con Comprobacion de las detecciones para validarlas.
 / Devuelve las amplitudes de Rpeak, Pwave y Twave
 / Soportada por el Nodo   
-// Envio - Recepcion: Se envian detecciones solo cuando hay error y este se ha repetido VARIAS veces SEGUIDAS
+// Envio - Recepcion: Se envian detecciones y este se ha repetido VARIAS veces SEGUIDAS
 //(si no se ha enviado ya)             
 // Registro de Historia de con "history" valores
 /***********************************************************************************************************/

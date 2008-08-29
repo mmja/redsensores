@@ -6,7 +6,7 @@
 / Con Comprobacion de las detecciones para validarlas.
 / Devuelve las amplitudes de Rpeak, Pwave y Twave
 / Soportada por el Nodo     
-// Envio - Recepcion: Se queda un tiempo sin hacer ni detectar nada (dormido) solo mete datos
+// Envio - Recepcion: Se queda un tiempo sin hacer ni detectar nada (dormido)  solo mete datos 
 // Cuando despierta si ha cambiado el resultado lo envia si hay un error              
 /***********************************************************************************************************/
 #include <math.h>
@@ -161,12 +161,14 @@ int8_t qwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	
 	while(qw>=countdet){
 		if((abs(values[(qw+POINTS)%POINTS])>thf)  && (values[(qw+POINTS)%POINTS]>0)
-		&& (abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(qw+POINTS)%POINTS])<=DETECINTERVAL)&& isMax[(qw+POINTS)%POINTS]==0){  
+		&& ((BUFLNVIRT - maxMin[(qw+POINTS)%POINTS] +maxMin[(detec[0]+POINTS)%POINTS])%BUFLNVIRT)<=DETECINTERVAL && isMax[(qw+POINTS)%POINTS]==0){  
 			outecg[4]=maxMin[(qw+POINTS)%POINTS]; 
 			detec[3]=qw; 		
 			return 1; 
 		}else{
-			if(abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(qw+POINTS)%POINTS])>DETECINTERVAL || (values[(qw+POINTS)%POINTS]<0))
+			
+			
+			if((BUFLNVIRT - maxMin[(qw+POINTS)%POINTS] +maxMin[(detec[0]+POINTS)%POINTS])%BUFLNVIRT>DETECINTERVAL || (values[(qw+POINTS)%POINTS]<0))
 				return 0;	
 			if((abs(values[(qw+POINTS)%POINTS])<=thf)||isMax[(qw+POINTS)%POINTS]==1)	qw=(qw-1);
 		}
@@ -182,12 +184,12 @@ int8_t swave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	
 	while(sw<(countdet+POINTS)){	
 		if( (abs(values[(sw+POINTS)%POINTS])>thf) && (values[(sw+POINTS)%POINTS]>0)
-		&&  (abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(sw+POINTS)%POINTS])< DETECINTERVAL)  && isMax[(sw+POINTS)%POINTS]==0){  
+		&&  ((BUFLNVIRT - maxMin[(detec[0]+POINTS)%POINTS] +maxMin[(sw+POINTS)%POINTS])%BUFLNVIRT< DETECINTERVAL)  && isMax[(sw+POINTS)%POINTS]==0){  
 			outecg[5]=maxMin[(sw+POINTS)%POINTS];  
 			detec[4]=sw; 
 			return 1; 
 		}else {
-			if(abs(maxMin[(detec[0]+POINTS)%POINTS]- maxMin[(sw+POINTS)%POINTS])>DETECINTERVAL || (values[(sw+POINTS)%POINTS]<0))
+			if((BUFLNVIRT - maxMin[(detec[0]+POINTS)%POINTS] +maxMin[(sw+POINTS)%POINTS])%BUFLNVIRT>DETECINTERVAL || (values[(sw+POINTS)%POINTS]<0))
 				return 0;	
 			if((abs(values[(sw+POINTS)%POINTS])<=thf)|| isMax[(sw+POINTS)%POINTS]==1)	sw=(sw+1);
 		}
