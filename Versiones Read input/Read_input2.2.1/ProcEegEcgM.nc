@@ -1,6 +1,6 @@
 //make ucm_eeg_sta install.1
 // VERSION 2.2.1
-// Envio - Recepcion: Se queda un tiempo sin hacer ni detectar nada (dormido)   
+// Envio - Recepcion: Se queda un tiempo sin hacer ni detectar nada (dormido)  solo mete datos 
 // Cuando despierta si ha cambiado el resultado lo envia si hay un error          
 /***********************************************************************************************************/
 
@@ -55,6 +55,8 @@ implementation {
     //detectamos qrs
 
 		cycle++;
+		
+	 if(sleepSend >= (SLEEP>>1)){cycle=1;}	
 	switch(cycle){
 	
 		case 1: data[j++] = get_sample_from_core();
@@ -152,7 +154,7 @@ implementation {
     if(indData ==SAMPLES*PERIODS){
 	  sleepSend++; 
 	  if(sleepSend == SLEEP)sleepSend=0;
-      if(sleepSend < (SLEEP>>1)){post processData();}
+     	post processData();
       
 	  indData=0;
     }
