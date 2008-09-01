@@ -10,3 +10,7 @@
  - msp430f149.pdf: datasheet de  nuestro nodo
  - jhill_thesis.pdf: tesis sobre las redes de sensores en general (muy larga pero completa)
  - Redes de sensores inalambricas.pdf: trabajo de dse
+
+ - eeg25-manual.pdf: caracteristicas del sensor que usamos
+
+ - 20051213-emgnet imec_v0_1: presentaciones en power point sobre el proyecto 
