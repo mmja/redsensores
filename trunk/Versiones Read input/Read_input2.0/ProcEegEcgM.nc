@@ -83,15 +83,13 @@ implementation {
 						j=0; 
 						result =  ecg_detection_twave(buffer);
 					}
-
-				countT =0;
-		//TOSH_TOGGLE_GREEN_LED_PIN();		
+				countT=0;
+			
 				 break;
 		case 8:data[j++] = get_sample_from_core(); 
 			if(result<10 && result!=0) {
 				result=ecg_detection_valid(buffer,detection,amplitudes);
 				
-			
 			}
 			
 			
