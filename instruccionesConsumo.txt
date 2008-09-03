@@ -1,0 +1,8 @@
+
+export DBG=power
+
+$ make pc
+
+./build/pc/main.exe -t=120 -p 2 > myapp.trace
+
+$TOSROOT/tools/scripts/PowerTOSSIM/postprocess.py -sb=0 --em $TOSROOT/tools/scripts/PowerTOSSIM/imec_eeg_energy_model.txt myapp.trace
