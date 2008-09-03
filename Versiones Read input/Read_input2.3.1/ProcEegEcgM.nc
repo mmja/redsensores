@@ -70,7 +70,7 @@ implementation {
 				}
 				j=0; 
 				if(result==0) cycle--; break;
-		case 2: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rpeak(buffer,detection);if(result!=1) cycle=7;} break;
+		case 2: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rpeak(buffer,detection);if(result==10) cycle=7;if(result==0) cycle=0;} break;
 		case 3:	data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_rwave(buffer); if(result!=1) cycle=7;} break;
 		case 4: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_qwave(buffer); /*if(result!=1) cycle=7;*/} break;
 		case 5: data[j++] = get_sample_from_core();if(result==1){result =  ecg_detection_swave(buffer); /*if(result!=1) cycle=7;*/} break;
@@ -101,15 +101,15 @@ implementation {
 			if(whichPacket==0){
 				datapck.data[numData++] = result;	
 				if (numData>16){  //se envia el paquete
-					
-					datapck.data[numData++] = heart_freq_calc();	
+					datapck.data[numData++] =(uint8_t)heart_freq_calc();	
 					send_result_to_host();
 					numData=0;
 				}
 			}else{
 				datapck2.data[numData++] = result;
 				if (numData>16){  //se envia el paquete
-					datapck.data[numData++] = heart_freq_calc();	
+				
+					datapck2.data[numData++] = (uint8_t)heart_freq_calc();
 					send_result_to_host();
 					numData=0;
 				}
@@ -181,7 +181,7 @@ implementation {
 			first_detection[1]+=60;
 			first_detection[0]--;
 		}
-		hfreq= 17 / (first_detection[1]*6000+first_detection[2]*100+(first_detection[3]>>1));
+		hfreq= (16*(60000 / (first_detection[1]*6000+first_detection[2]*100+(first_detection[3]>>1))))/10;
 		return hfreq;
 			         
 		
