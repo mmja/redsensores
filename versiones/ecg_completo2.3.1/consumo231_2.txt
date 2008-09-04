@@ -1,0 +1,19 @@
+maxseen 1
+Mote 0, cpu total: 214.773436
+Mote 0, radio total: 7843.238060
+Mote 0, adc total: 0.000000
+Mote 0, leds total: 0.000000
+Mote 0, sensor total: 0.000000
+Mote 0, eeprom total: 0.000000
+Mote 0, cpu_cycle total: 0.000000
+Mote 0, Total energy: 8058.011497
+
+Mote 1, cpu total: 177.694888
+Mote 1, radio total: 13724.210196
+Mote 1, adc total: 0.000000
+Mote 1, leds total: 0.000000
+Mote 1, sensor total: 0.000000
+Mote 1, eeprom total: 0.000000
+Mote 1, cpu_cycle total: 0.000000
+Mote 1, Total energy: 13901.905084
+
