@@ -120,7 +120,7 @@ implementation {
 			
 	     		
 				if(whichPacket==0){
-					datapck.data[numData++] = result;
+					//datapck.data[numData++] = result;
 					for(i=1;i<12;i++){
 						datapck.data[numData++] = detection[i];
 						}
@@ -133,7 +133,7 @@ implementation {
 					}
 				}
 				else{
-						datapck2.data[numData++] = result;
+						//datapck2.data[numData++] = result;
 					for(i=1;i<12;i++){
 						datapck2.data[numData++] = detection[i];
 						}
@@ -147,7 +147,7 @@ implementation {
 				}
 				
 				
-				if (numData>1){  //se envia el paquete
+				if (numData>18){  //se envia el paquete
 					send_result_to_host();
 					numData=0;
 				}
