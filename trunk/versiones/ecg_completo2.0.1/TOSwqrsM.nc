@@ -83,7 +83,7 @@ implementation {
 	static uint8_t i=0, j=0;
 	uint8_t ldata, mdata , numRepeatedResult=0;//Numero de veces repetidas del result en la Historia
 	static int8_t result;
-
+		if(TOS_LOCAL_ADDRESS==1){ // IF para 5 nodos
 		cycle++;
 	switch(cycle){
 	
@@ -174,7 +174,7 @@ implementation {
 	
 	}
 
-    
+    }
 		return SUCCESS;
 	}
 	

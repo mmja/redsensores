@@ -80,7 +80,7 @@ implementation {
 	//static uint16_t data;
 	static int16_t heart_freq;
 	static int8_t result;
-	
+		if(TOS_LOCAL_ADDRESS==1){ // IF para 5 nodos
 		cycle++;
 	switch(cycle){
 	
@@ -144,6 +144,7 @@ implementation {
 		default: result = 0;cycle=0;
 	
 	
+	}
 	}
 		return SUCCESS;
 	}

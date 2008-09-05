@@ -85,7 +85,7 @@ implementation {
     //data = dataEegEcg[1]; //es el dato q le viene del sensor, tiene 10 posiciones y viene 5 datos del primer canal y del segundo alternados
     
     //detectamos qrs
-
+		if(TOS_LOCAL_ADDRESS==1){ // IF para 5 nodos
 		cycle++;
 	switch(cycle){
 	
@@ -165,7 +165,7 @@ implementation {
 	
 	}
 
-
+}
 		return SUCCESS;
 	}
 	

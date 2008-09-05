@@ -80,7 +80,7 @@ implementation {
 	static uint8_t i=0, j=0;
 	uint8_t ldata, mdata;
 	static int8_t result;
-	
+	if(TOS_LOCAL_ADDRESS==1){ // IF para 5 nodos
     //el sensor muestrea a una frecuencia de 1000hz, entonces coge un dato de cada 5 para muestrear a 200hz
     //data = dataEegEcg[1]; //es el dato q le viene del sensor, tiene 10 posiciones y viene 5 datos del primer canal y del segundo alternados
     sleepSend++; 
@@ -172,7 +172,7 @@ implementation {
 	
 	}
 
-
+}
 		return SUCCESS;
 	}
 	

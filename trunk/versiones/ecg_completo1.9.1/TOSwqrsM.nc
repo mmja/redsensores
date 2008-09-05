@@ -84,7 +84,7 @@ implementation {
 		static uint8_t i=0, j=0;
 		uint8_t ldata, mdata;
 		//Declaración de las demás variables que necesitamos
-		
+		if(TOS_LOCAL_ADDRESS==1){ // IF para 5 nodos
 		//dbg(DBG_USR1, "Timer disparado\n");
 		
 		cycle++;
@@ -161,8 +161,9 @@ implementation {
 	
 	}
 		//Ahora evaluamos el resultado y en función de lo que hayamos obtenido mandaremos un paquete, o no haremos nada, etc.
-		
+	}// IF 
 		return SUCCESS;
+		
 	}
 	
 	event result_t SendData.sendDone(TOS_MsgPtr pMsg, result_t success) {
