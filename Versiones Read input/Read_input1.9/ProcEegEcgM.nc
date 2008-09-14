@@ -111,7 +111,7 @@ implementation {
 						datapck2.data[numData++] = ldata;
 					}*/
 				}
-				if (numData>1){  //se envia el paquete
+				if (numData>1){  //packet is sent
 					send_result_to_host();
 					numData=0;
 				} 
