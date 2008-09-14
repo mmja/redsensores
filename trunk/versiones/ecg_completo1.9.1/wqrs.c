@@ -11,23 +11,28 @@
 #include <math.h>
 #include "wqrs.h"
 
-int16_t count=0, from=0;//readed values number
-int16_t notnoise=0;
-int16_t thr=0,thf=0; //threshold
-int8_t initialize=1, filled_mm=0;
+int16_t count=0, from=0;//main circle buffer indexs  
+
+int16_t notnoise=0; // you shouldnt analyze the next positions when you find a Rpeak, 
+					// to avoid detect the same repeak again, until it get out of the buffer  
+int16_t thr=0,thf=0; //thresholds
+int8_t initialize=1, filled_mm=0; // initialize buffers 
 int16_t filled_buffer_fp=0; //max MAXFILLED times --> number of times that the buffer has to be filled to sum 200 positions  
 
-uint8_t hour=0,minute=0,second=0, positions=0;
-int16_t out[12];
+uint8_t hour=0,minute=0,second=0, positions=0; //clock 
+int16_t out[12];  //positions of current detecction
 int8_t combine[4]; // 0 ->Twave exist, 1-> Pwave exist,  2 ->S exist, 3 ->Q exist
-int16_t detec[5], countdet=0;
-uint16_t maxMin[POINTS];
-int16_t valuesfp[POINTS];
-int16_t values[POINTS];
-int8_t isMax[POINTS];//Si es maximo se pone a 1 y si es minimo a 0
-int16_t valorAnterior;
-int16_t dist_rpeaks;
+int16_t countdet=0;  //max and min circle buffers index
+int16_t detec[5]; //positions of detections in max and min buffers
+uint16_t maxMin[POINTS];  //positions of the min and max values who are bigger than thf
+int16_t valuesfp[POINTS]; //values of the original signal
+int16_t values[POINTS];  //values of the transform signal
+int8_t isMax[POINTS];//1 if it is maximum or 0 if it is minimum
+int16_t valorAnterior; //used to find the minimum or maximum when there are several identical values in the signal
+int16_t dist_rpeaks;   //distant between the current and last rpeak in positions
+
 //**********************************************************************************************************
+//saving and taking data from comprissed buffers
 void comprime(int8_t f[BUFLNZIP],int16_t p,int16_t data){
 	int8_t data_mod;
 	int16_t inter;
@@ -49,7 +54,7 @@ void comprime(int8_t f[BUFLNZIP],int16_t p,int16_t data){
 int16_t descomprime(int8_t f[BUFLNZIP],int16_t p,int8_t isBuffer){
 	int16_t outd,aux;
 	int8_t inter;
-	if(isBuffer==0){
+	if(isBuffer==0){ //f could have positives and negatives values
 		if(p%2==0){
 			outd=f[p+p/2];
 			outd=outd<<4;
@@ -61,7 +66,7 @@ int16_t descomprime(int8_t f[BUFLNZIP],int16_t p,int8_t isBuffer){
 			aux=f[p+p/2+1]&0x00ff;
 			outd=outd|aux;
 		}
-	}else {
+	}else { //f just have positives values
 		if(p%2==0){
 			outd=f[p+p/2]&0x00ff;
 			outd=outd<<4;
@@ -95,18 +100,18 @@ int16_t mmt(int16_t current,int8_t f[BUFLNZIP]){
 		}
 		
 		//return ((max+min-2*descomprime(f,(current+BUFLN)%(BUFLN),0)) *10 / S );	
-		return (((max+min-2*descomprime(f,(current+BUFLN)%(BUFLN),0)) *10 )>>4);
+		return (((max+min-2*descomprime(f,(current+BUFLN)%(BUFLN),0)) *10 )>>4); //we can use a right shift instead division
 }	
 	
 //********************************************************************************************
-// step3: Rpeaks detection, the local maxima and minima
+// step3: Rpeaks detection
 // return 0 if there aren't any rpeaks detected
 //********************************************************************************************
 int8_t rpeak_detection(int8_t f[BUFLNZIP], int16_t outecg[12]){
 
     int16_t r;  
    
-    // Looking for the first local minimun 
+    // Looking for the first local minimun in the buffer, smaller than -thr 
 	r=countdet;
     while(r<countdet+POINTS){
 	    
@@ -118,7 +123,7 @@ int8_t rpeak_detection(int8_t f[BUFLNZIP], int16_t outecg[12]){
 			return 1;}	
 	    r++;   
     }
-    //ANALIZA EL ULTIMO VALOR
+	//analize the last value
     if(values[(r+POINTS)%POINTS]<(-1*thr) && isMax[(r+POINTS)%POINTS]==0){
 	    outecg[0]=maxMin[(r+POINTS)%POINTS];
 	    outecg[1]=valuesfp[(r+POINTS)%POINTS];
@@ -133,6 +138,7 @@ int8_t rpeak_detection(int8_t f[BUFLNZIP], int16_t outecg[12]){
 // step4: Rwave detection
 // return 0 if there aren't any rwave detected
 //********************************************************************************************
+//the firts two local maxima from Rpeak to the right and to the left
 int8_t rwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	int16_t rwave0,rwave1;
 	
@@ -155,6 +161,7 @@ int8_t rwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 //********************************************************************************************
 // step5: Qwave detection
 //********************************************************************************************
+//the firts local minima from Rwave to the left
 int8_t qwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	int16_t qw = (detec[1]-1);
 	
@@ -177,6 +184,7 @@ int8_t qwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 //********************************************************************************************
 // step6: Swave detection
 //********************************************************************************************
+//the firts local minima from Rwave to the right
 int8_t swave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 	
 	int16_t sw = (detec[2]+1);
@@ -199,16 +207,16 @@ int8_t swave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 // step7: onset and offset, Pwave and Twave detection
 //********************************************************************************************
 int8_t pwave(int8_t f[BUFLNZIP], int16_t outecg[12]){	
-	//Pwave=Buscamos 2 maximos locales desde Qwave hacia la izq:
+	//Pwave=Searching two local maxima from Qwave (Rwave) to the left
 	int16_t offsetP;
 	int16_t onsetP;
 	int16_t pPeak;
 	
-	if(combine[3]==1){ // si existe q
+	if(combine[3]==1){ // if Qwave does exist 
 		offsetP=(detec[3]-1);
 		pPeak=detec[3]-2;
 		onsetP=(detec[3]-3);
-	}else{				// si NO existe q
+	}else{				// if Qwave doest exist 
 		offsetP=(detec[1]-1);
 		pPeak=detec[1]-2;
 		onsetP=(detec[1]-3);
@@ -224,7 +232,7 @@ int8_t pwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 		 			return 1;
 	 	}else{
 		 	if(isMax[(onsetP+POINTS)%POINTS]==0 && isMax[(offsetP+POINTS)%POINTS]==1 && isMax[(pPeak+POINTS)%POINTS]==0){
-			 	if(values[(pPeak+POINTS)%POINTS]>=(-1)*thf){   //permite la combinacion max - min - min - ... - max
+			 	if(values[(pPeak+POINTS)%POINTS]>=(-1)*thf){   //we can find several min between two maximum: max - min - min - ... - max
 				 	pPeak=onsetP;
 				 }
 				 onsetP=(onsetP-1);	
@@ -239,17 +247,17 @@ int8_t pwave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 }	
 //********************************************************
 int8_t twave(int8_t f[BUFLNZIP], int16_t outecg[12]){
-	//Twave=Buscamos 2 maximos locales desde Swave hacia la dcha:
+	//Twave= Searching two local maxima from Swave (Rwave) to the right
 	int16_t offsetT;
 	int16_t onsetT;
-	int16_t tPeak;//=1000;
+	int16_t tPeak;
 
-	if(combine[2]==1){ // si existe s
+	if(combine[2]==1){ // if Swave does exist 
 		onsetT=(detec[4]+1);
 		offsetT=(detec[4]+3);
 		tPeak=detec[4]+2;
 	}
-	else{				// si NO existe s
+	else{				// if Swave doest exist 
 		onsetT=(detec[2]+1);
 		offsetT=(detec[2]+3);
 		tPeak=detec[2]+2;
@@ -266,7 +274,7 @@ int8_t twave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 		 			return 1;
 	 	}else{
 		 	if(isMax[(offsetT+POINTS)%POINTS]==0 && isMax[(onsetT+POINTS)%POINTS]==1 && isMax[(tPeak+POINTS)%POINTS]==0){
-			 	if(values[(tPeak+POINTS)%POINTS]>=(-1)*thf){  //permite la combinacion max - min - min - ... - max
+			 	if(values[(tPeak+POINTS)%POINTS]>=(-1)*thf){  //we can find several min between two maximum: max - min - min - ... - max
 				 	tPeak=offsetT;
 				 }
 				 offsetT=(offsetT+1);	
@@ -281,8 +289,9 @@ int8_t twave(int8_t f[BUFLNZIP], int16_t outecg[12]){
 }	
 
 //********************************  Timing  **********************************************
+//incrementing clock a position 
+//clock respect Count
 void addPosition(){
-	//Reloj va con la hora de Count
 	positions++;
 	if(positions==200){ second++; positions=0;}
 	if(second>=60){
@@ -295,15 +304,16 @@ void addPosition(){
 		}	
 	}		
 }
+//calculate the time of instant (instant is a position in the virtual buffer)
 void giveTime(int16_t instant,int8_t rtime[12]){
 	int16_t pos, rs, rm, rh;
 	pos=positions;
 	rs=second;
 	rm=minute;
 	rh=hour;
-
+	//calculate positions respect Count
 	if(count<from) pos-=(count+(BUFLN*(filled_buffer_fp +1)) + BUFLNVIRT- instant)%BUFLNVIRT; 
-	else pos-=(count+(BUFLN*filled_buffer_fp) + BUFLNVIRT- instant)%BUFLNVIRT; //instante ahora va a ser de 0 a 199!
+	else pos-=(count+(BUFLN*filled_buffer_fp) + BUFLNVIRT- instant)%BUFLNVIRT; 
 	while(pos<0){
 		pos+=200;
 		rs--;
@@ -331,6 +341,7 @@ void giveTime(int16_t instant,int8_t rtime[12]){
 	rtime[0]=rh;		
 }
 //********************************************************************************************
+//Validate in function of the nomality rules
 //out = Rpeak, Rpeak.amplitude, Rwave[0], Rwave[1], Qwave, Swave, Pwave[0], Pwave.amplitude, Pwave[1], Twave[0], Twave.amplitude, Twave[1]
 
 int8_t validation(int16_t rr,uint8_t detection[12]){
@@ -350,7 +361,6 @@ int8_t validation(int16_t rr,uint8_t detection[12]){
 		s=detection[7]>>1; 
 	}
 	
-	//dbg(DBG_USR1, "thr: %d,  %d,  \%f  \n",s,q,((s-q+BUFLN)%BUFLN)/FREQ);                                    
 	//rule 1: Q-S distance<= 0.10s
 	if((s+q) > 10) return 1;  
 		
@@ -409,32 +419,36 @@ int8_t mainPoints( int8_t f[BUFLNZIP]){
 	int16_t val1,val2,datum;
 	int16_t j;
 	j=from;
-	datum= mmt((j+BUFLN)%(BUFLN),f);
-	val1=mmt((j+1 +BUFLN)%(BUFLN),f);//valor anterior (el del medio)
-	val2=mmt((j+2+BUFLN)%(BUFLN),f); //valor mas anterior
+	//three values to compare
+	datum= mmt((j+BUFLN)%(BUFLN),f); //last data saved in the buffer
+	val1=mmt((j+1 +BUFLN)%(BUFLN),f);
+	val2=mmt((j+2+BUFLN)%(BUFLN),f); 
 
 	if(((val1==val2) && (val1>datum || val1<datum))&&(( abs(val1)>thr) || (abs(val1)>thf))){
 		valorAnterior=datum;
 		}
 	
-	//Si es maximo o minimo, y supera los umbrales (thr o thf)
+	//if val1 is maximum or minimum and it is bigger than thf, we save it 
 	if(((val1>val2 && val1>datum)||(val1<val2 && val1<datum)) && (( abs(val1)>thr) || (abs(val1)>thf))){
 		values[countdet]= val1;
 		valuesfp[countdet]=descomprime(f,(j+1 +BUFLN)%(BUFLN),0);   
-		
+		//saving the position respect the virtual buffer with 200 longitude
 		if( (j+1 +BUFLN)%(BUFLN)!=0 )maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*filled_buffer_fp;
 		else maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*(filled_buffer_fp+1);
+		
 		if((val1>val2) && (val1>datum))isMax[countdet]=1;else isMax[countdet]=0;
 		countdet=(countdet+1+POINTS)%POINTS;
 		filled_mm=1;
 		return 1;
 	}else
-	//Si es el ultimo  de muchos iguales y supera umabrles
+	//if val1 is the last value of several identical values, and it is bigger than thf, we save it
 		if(((val1==datum && valorAnterior<val1 && val1>val2)||(val1==datum && valorAnterior>val1 && val1<val2)) && (( abs(val1)>thr) || (abs(val1)>thf))){
 			values[countdet]= val1;
 			valuesfp[countdet]=descomprime(f,(j+1 +BUFLN)%(BUFLN),0);   
+			//saving the position respect the virtual buffer with 200 longitude
 			if( (j+1 +BUFLN)%(BUFLN)!=0 )maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*filled_buffer_fp;
 			else maxMin[countdet]= (j+1+BUFLN)%(BUFLN)+BUFLN*(filled_buffer_fp+1);
+			
 			if((val1==datum) && (valorAnterior<val1 )&& (val1>val2))  isMax[countdet]=1;  else isMax[countdet]=0;
 			countdet=(countdet+1+POINTS)%POINTS;
 			filled_mm=1;
@@ -447,25 +461,27 @@ int8_t mainPoints( int8_t f[BUFLNZIP]){
 //***************************  METODO PRINCIPAL ********************************************
 //**********************************************************************************************
 
-int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
-{  static uint8_t detection[12];
+int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP]){  
+	static uint8_t detection[12];
+	//insert the new data in the circle buffer
 	comprime(fp,(count+BUFLN)%(BUFLN),datum);
 	
 	count=(count+1+BUFLN)%(BUFLN);
 	
-	//Aumenta el reloj:
+	//clock update
 	 addPosition();
 	 dist_rpeaks++;
 
 	                  
-	from=((count+1+MARGIN+BUFLN)%(BUFLN));//+NOPS*(1.5*LQRS*FS-1)/2;
+	from=((count+1+MARGIN+BUFLN)%(BUFLN));//to avoid the "margin" initial values, because they are useless because of the mmt
 	if(from==0){
 		filled_buffer_fp++;
 		if(filled_buffer_fp==MAXFILLED) filled_buffer_fp=0; 	
 	}	
 	
-	//Fija los umbrales y Coge los puntos clave
+	///fixing thresholds
 	thr=140; thf=5; 
+	//searching for local minima or maxima points
 	if(!mainPoints(fp)){
 		giveTime((from) + (BUFLN*filled_buffer_fp),detection);
 		//dbg_clear(DBG_USR1, "\%d  %d  %d %d --> MMF: \%d \%d \n",detection[0],detection[1],detection[2],detection[3],descomprime(fp,(from+BUFLN)%(BUFLN),0), mmt((from+BUFLN)%(BUFLN),fp));
@@ -483,7 +499,7 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 			initialize=0;	
 	}
 
-	if(initialize ){return 0;}
+	if(initialize ){return 0;} //we dont analize the signtal until the maxmin buffer is filled
 
 	if(countdet==0){		
 		notnoise=(notnoise+POINTS)%(POINTS);	                   
@@ -496,16 +512,16 @@ int8_t ecg_detection_datain(int16_t datum, int8_t fp[BUFLNZIP])
 }
 //****************************************************************************************************************************************
 int8_t ecg_detection_rpeak(int8_t fp[BUFLNZIP],uint8_t detection[12]){ 
-	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)
+	int8_t correct=0; 
 	
 	if(notnoise>countdet){
 		return 0;	
 	}else{ notnoise=0;}
 	
-// Step 3: Rpeaks detection, the local maxima and minima
+// Step 3: Rpeaks detection, the local minima
 	correct=rpeak_detection(fp,out);
 	if (correct==1){
-		return 1;		
+		return 1;		//Rpeak detected
 		
 	}else{
 		
@@ -526,7 +542,7 @@ int8_t ecg_detection_rwave(int8_t fp[BUFLNZIP]){
 	// Step 4: Rwave detection		
       	correct=rwave(fp,out);	
       	if (correct==1) {    
-        	return 1;}	
+        	return 1;}	//Rwave detected
         
 	return 0;
 }
@@ -549,7 +565,7 @@ int8_t ecg_detection_pwave(int8_t fp[BUFLNZIP]){
 	// Step 7: onset and offset, Pwave and Twave detection
 	combine[1]=pwave(fp,out);
 	if(combine[1]==1){
-		return 1;
+		return 1;  //Pwave detected
 	}else {
 		return 8; //Pwave not detected
 	}
@@ -560,7 +576,7 @@ int8_t ecg_detection_twave(int8_t fp[BUFLNZIP]){
 		// Step 7: onset and offset, Pwave and Twave detection
 		combine[0]=twave(fp,out);
 		if(combine[0]==1){	
-			return 1;		
+			return 1;		//Twave detected
 		}else {
 			out[9]=-1;out[10]= -1;out[11]= -1; 
 			combine[0]=2;
@@ -571,8 +587,9 @@ int8_t ecg_detection_twave(int8_t fp[BUFLNZIP]){
 }
 //****************************************************************************************************************************************
 int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amplitudes[3]){  
-	int8_t correct=0; // comprobamos si cada paso es correcto (correct =0) o si ha fallado (correct =1)	
-	
+	int8_t correct=0; 
+	//saving information in detection and amplitudes 
+
 	giveTime(out[0],detection);
 	amplitudes[0]=out[1];
 	detection[4]=(BUFLNVIRT - out[2]+out[0])%BUFLNVIRT;
@@ -606,8 +623,8 @@ int8_t ecg_detection_valid(int8_t fp[BUFLNZIP],uint8_t detection[12],int16_t amp
 	} else detection[7]=0;  
 			   
 	if(correct!=8 && correct!=9){
+		//validating the detection
 		correct=validation(dist_rpeaks>>1,detection);
-		//correct=0;
 	}	
 	dist_rpeaks=0;
 
